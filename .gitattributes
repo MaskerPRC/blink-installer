@@ -1,0 +1,53 @@
+# Line endings are decided here, not by each contributor's core.autocrlf.
+#
+# Without this file the same checkout differs between machines: one person's
+# clone gets CRLF, another's LF, and the next commit shows every line of a file
+# as changed. On a repository that also carries binaries the stakes are higher —
+# see the Stubs note below.
+
+* text=auto eol=lf
+
+# Windows-native scripts. PowerShell and cmd are happier with CRLF, and these
+# are only ever run on Windows anyway.
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# NSIS scripts checked in for the smoke tests. makensis reads either ending,
+# but keep them Windows-shaped to match what the build generates.
+*.nsi  text eol=crlf
+*.nsh  text eol=crlf
+
+# ── Binaries ──────────────────────────────────────────────────────────────────
+# Marked explicitly rather than left to content detection. Most of these are
+# obvious from the extension; the NSIS stubs are the reason this section exists
+# at all — they carry no extension, and a stub silently mangled by end-of-line
+# conversion produces installers that fail at run time on someone else's clone,
+# with nothing in the diff to suggest why.
+packages/runtime/nsis/Stubs/** binary
+packages/runtime/nsis/Bin/**   binary
+
+*.dll  binary
+*.exe  binary
+*.lib  binary
+*.pdb  binary
+*.ico  binary
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.mp4  binary
+*.zip  binary
+*.chm  binary
+
+# ── Repository presentation ───────────────────────────────────────────────────
+# Keep vendored third-party sources and the checked-in binaries out of the
+# language statistics, so GitHub reports what this project is written in rather
+# than what it redistributes.
+packages/runtime/**            linguist-vendored
+native/third_party/**          linguist-vendored
+docs/demo.gif                  linguist-documentation

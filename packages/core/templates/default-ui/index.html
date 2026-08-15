@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Setup</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./splash.css">
+</head>
+<body>
+  <!-- Full-screen entrance animation. Removed from the DOM once it finishes,
+       and never inserted at all when splash is disabled. -->
+  <div id="splash">
+    <div class="halo"></div>
+    <div id="shards"></div>
+    <div class="core"></div>
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="splash-mark">
+      <div class="glyph"></div>
+      <div class="name"></div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="titlebar" id="titlebar">
+      <span class="app" id="titlebar-name">Setup</span>
+      <button class="chrome" id="btn-minimize" title="最小化" aria-label="最小化">&#8211;</button>
+      <button class="chrome" id="btn-close" title="关闭" aria-label="关闭">&#10005;</button>
+    </header>
+
+    <!-- Screen 1: welcome and options -->
+    <section class="screen is-active" data-screen="welcome">
+      <div class="hero">
+        <div class="logo" id="logo-mark"></div>
+        <h1 id="welcome-title">安装向导</h1>
+        <p class="subtitle" id="welcome-subtitle"></p>
+      </div>
+
+      <div class="field">
+        <label for="install-dir">安装位置</label>
+        <div class="path-row">
+          <input type="text" id="install-dir" readonly>
+          <button class="ghost" id="btn-browse">浏览…</button>
+        </div>
+        <p class="hint" id="space-hint">&nbsp;</p>
+      </div>
+
+      <label class="check">
+        <input type="checkbox" id="opt-desktop" checked>
+        <span>创建桌面快捷方式</span>
+      </label>
+
+      <footer class="actions">
+        <p class="agreement" id="agreement"></p>
+        <button class="primary" id="btn-install">立即安装</button>
+      </footer>
+    </section>
+
+    <!-- Screen 2: progress -->
+    <section class="screen" data-screen="installing">
+      <div class="hero">
+        <div class="logo spinning" id="logo-installing"></div>
+        <h1>正在安装</h1>
+        <p class="subtitle" id="install-detail">准备中…</p>
+      </div>
+      <div class="progress">
+        <div class="bar"><span id="progress-fill"></span></div>
+        <div class="percent" id="progress-percent">0%</div>
+      </div>
+    </section>
+
+    <!-- Screen 3: done -->
+    <section class="screen" data-screen="done">
+      <div class="hero">
+        <div class="logo done">&#10003;</div>
+        <h1>安装完成</h1>
+        <p class="subtitle" id="done-subtitle"></p>
+      </div>
+      <footer class="actions">
+        <label class="check">
+          <input type="checkbox" id="opt-launch" checked>
+          <span>立即运行</span>
+        </label>
+        <button class="primary" id="btn-finish">完成</button>
+      </footer>
+    </section>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

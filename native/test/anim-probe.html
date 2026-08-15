@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>animation capability probe</title>
+<style>
+/*
+ * Each lane animates one white bar left-to-right by a different mechanism.
+ * The harness screenshots the window at several times and checks, per lane,
+ * whether the bar actually moved on screen — which is the only question that
+ * matters. A technique can advance its computed values perfectly and still
+ * never be presented on a layered window.
+ *
+ * Written in ES5 / old-CSS so the probe itself cannot be the thing that fails.
+ */
+html, body { margin: 0; height: 100%; background: transparent; }
+body { font: 12px/1 Consolas, monospace; -webkit-user-select: none; user-select: none; }
+
+.lane {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 56px;
+  /* Faint band so the lane is locatable even with the bar at x=0. */
+  background: rgba(255, 255, 255, 0.05);
+}
+.label {
+  position: absolute;
+  left: 8px;
+  top: 20px;
+  color: #9fe3a0;
+  z-index: 2;
+}
+.bar {
+  position: absolute;
+  top: 12px;
+  left: 320px;
+  width: 90px;
+  height: 32px;
+  background: #ffffff;
+}
+
+/* --- 1. CSS @keyframes animating transform ------------------------------ */
+@keyframes kf-transform { from { transform: translateX(0); } to { transform: translateX(900px); } }
+#bar-kf-transform { animation: kf-transform 2400ms linear infinite; }
+
+/* --- 2. CSS @keyframes animating left (layout) -------------------------- */
+@keyframes kf-left { from { left: 320px; } to { left: 1220px; } }
+#bar-kf-left { animation: kf-left 2400ms linear infinite; }
+
+/* --- 3. CSS transition on transform ------------------------------------- */
+#bar-tr-transform { transition: transform 2400ms linear; }
+
+/* --- 4. CSS transition on left ------------------------------------------ */
+#bar-tr-left { transition: left 2400ms linear; }
+
+/* 5 raf-transform, 6 raf-left, 7 canvas, 8 svg: driven below. */
+#canvas-lane { position: absolute; top: 12px; left: 320px; }
+</style>
+</head>
+<body>
+<script>
+var LANES = [
+  ['kf-transform',  'css @keyframes transform'],
+  ['kf-left',       'css @keyframes left'],
+  ['tr-transform',  'css transition transform'],
+  ['tr-left',       'css transition left'],
+  ['raf-transform', 'js rAF transform'],
+  ['raf-left',      'js rAF left'],
+  ['canvas',        'canvas 2d'],
+  ['svg',           'svg SMIL']
+];
+
+var body = document.body;
+for (var i = 0; i < LANES.length; i++) {
+  var id = LANES[i][0];
+  var lane = document.createElement('div');
+  lane.className = 'lane';
+  lane.style.top = (i * 64 + 20) + 'px';
+  lane.id = 'lane-' + id;
+
+  var label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = (i + 1) + '. ' + LANES[i][1];
+  lane.appendChild(label);
+
+  if (id === 'canvas') {
+    var canvas = document.createElement('canvas');
+    canvas.width = 960; canvas.height = 32;
+    canvas.style.cssText = 'position:absolute;top:12px;left:320px';
+    canvas.id = 'canvas-el';
+    lane.appendChild(canvas);
+  } else if (id === 'svg') {
+    lane.innerHTML += '<svg width="960" height="32" style="position:absolute;top:12px;left:320px">' +
+      '<rect width="90" height="32" fill="#fff">' +
+      '<animate attributeName="x" from="0" to="900" dur="2.4s" repeatCount="indefinite"/>' +
+      '</rect></svg>';
+  } else {
+    var bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.id = 'bar-' + id;
+    lane.appendChild(bar);
+  }
+  body.appendChild(lane);
+}
+
+/* CSS transitions need a second style write to run. */
+setTimeout(function () {
+  var t1 = document.getElementById('bar-tr-transform');
+  if (t1) t1.style.transform = 'translateX(900px)';
+  var t2 = document.getElementById('bar-tr-left');
+  if (t2) t2.style.left = '1220px';
+}, 60);
+
+/* JS-driven lanes plus canvas, all off one rAF loop. */
+/*
+ * Frame-identity swatch.
+ *
+ * Position-based measurement quantises: two consecutive presented frames can
+ * round to the same pixel and look like one. This block's colour encodes the
+ * rAF frame counter instead, so every presented frame carries a distinct
+ * value and counting unique colours counts frames exactly.
+ */
+var swatch = document.createElement('div');
+swatch.id = 'frame-swatch';
+swatch.style.cssText =
+  'position:absolute;right:0;top:0;width:120px;height:120px;background:#000';
+document.body.appendChild(swatch);
+
+var started = Date.now();
+var frames = 0;
+var rafTransform = document.getElementById('bar-raf-transform');
+var rafLeft = document.getElementById('bar-raf-left');
+var canvasEl = document.getElementById('canvas-el');
+var ctx = canvasEl && canvasEl.getContext ? canvasEl.getContext('2d') : null;
+
+function tick() {
+  frames++;
+  // Low bits in each channel, so successive frames are far apart in value and
+  // survive any resampling on the way to the screenshot.
+  swatch.style.backgroundColor =
+    'rgb(' + ((frames * 37) % 256) + ',' + ((frames * 91) % 256) + ',' + ((frames * 151) % 256) + ')';
+  var t = ((Date.now() - started) % 2400) / 2400;
+  if (rafTransform) rafTransform.style.transform = 'translateX(' + (t * 900) + 'px)';
+  if (rafLeft) rafLeft.style.left = (320 + t * 900) + 'px';
+  if (ctx) {
+    ctx.clearRect(0, 0, 960, 32);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(t * 900, 0, 90, 32);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+setInterval(function () {
+  console.log('PROBE fps=' + Math.round(frames / ((Date.now() - started) / 1000)) +
+              ' size=' + document.documentElement.clientWidth + 'x' +
+              document.documentElement.clientHeight);
+}, 1000);
+</script>
+</body>
+</html>

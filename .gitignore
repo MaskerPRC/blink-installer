@@ -1,0 +1,29 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# native build output
+native/build/
+native/out/
+
+# The runtime binaries ARE committed — see THIRD-PARTY-NOTICES.md. Checking them
+# in costs ~36 MB of history but makes a fresh clone buildable offline, with no
+# dependency on upstream download URLs staying alive.
+
+# example / test artifacts
+examples/**/out/
+examples/**/dist/
+examples/**/app/
+examples/**/build/
+*.exe
+!packages/runtime/nsis/**/*.exe
+!packages/runtime/bin/**/*.exe
+
+# diagnostics produced by running the smoke test / installers
+*.log
+native/test/**/*.png
+native/test/shot-*/
+examples/**/*.png
+
+.DS_Store
+Thumbs.db

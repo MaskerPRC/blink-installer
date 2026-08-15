@@ -1,0 +1,29 @@
+{
+  "name": "blink-installer-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build beautiful HTML/CSS/JS Windows installers. NSIS under the hood, miniblink for rendering.",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "comment:build": "Explicit order, not --workspaces: npm runs workspaces alphabetically, which puts the CLI and core before the packages they import types from, so a clean checkout fails its first build and only succeeds on the second.",
+  "scripts": {
+    "build": "npm run build -w blink-installer-ui && npm run build -w blink-installer-runtime && npm run build -w blink-installer-core && npm run build -w blink-installer && npm run build -w blink-installer-maker",
+    "clean": "npm run clean --workspaces --if-present",
+    "native:configure": "cmake -S native -B native/build -A Win32",
+    "native:build": "cmake --build native/build --config Release",
+    "test": "npm run build && npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@electron-forge/maker-base": "^7.11.2",
+    "@types/babel__core": "^7.20.5",
+    "@types/node": "^22.20.1",
+    "app-builder-bin": "^5.0.0-alpha.10",
+    "typescript": "^5.6.3"
+  },
+  "license": "MIT"
+}

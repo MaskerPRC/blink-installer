@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>minimal fps</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent}
+  #frame-swatch{position:absolute;right:0;top:0;width:120px;height:120px;background:#000}
+  #hud{position:absolute;left:20px;top:20px;color:#7ee787;font:14px Consolas,monospace}
+</style>
+</head>
+<body>
+<div id="frame-swatch"></div>
+<div id="hud"></div>
+<script>
+/* The lightest page that can be measured: one swatch whose colour encodes the
+   requestAnimationFrame counter. If this still caps at the same rate as the
+   busy probe page, the limit is miniblink's present loop rather than the cost
+   of painting the content. */
+var swatch = document.getElementById('frame-swatch');
+var hud = document.getElementById('hud');
+var frames = 0, started = Date.now();
+function tick() {
+  frames++;
+  swatch.style.backgroundColor =
+    'rgb(' + ((frames*37)%256) + ',' + ((frames*91)%256) + ',' + ((frames*151)%256) + ')';
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+setInterval(function () {
+  var fps = Math.round(frames / ((Date.now()-started)/1000));
+  hud.textContent = 'rAF ' + fps + ' Hz';
+  console.log('PROBE raf=' + fps);
+}, 1000);
+</script>
+</body>
+</html>

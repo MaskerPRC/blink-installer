@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ability sweep</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent}
+  body{font:13px/1.5 "Segoe UI",sans-serif;-webkit-user-select:none;user-select:none}
+  .card{position:absolute;top:10px;right:10px;bottom:10px;left:10px;border-radius:12px;
+        background:#141920;color:#e6edf3;box-shadow:0 18px 50px rgba(0,0,0,.55);
+        display:flex;flex-direction:column;overflow:hidden}
+  .bar{height:38px;line-height:38px;padding:0 14px;font-weight:600;background:rgba(255,255,255,.05)}
+  pre{margin:0;flex:1;padding:12px 16px;overflow:auto;font:11px/1.5 Consolas,monospace;
+      -webkit-user-select:text;user-select:text}
+  .ok{color:#7ee787}.no{color:#ff7b72}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">ability sweep</div>
+  <pre id="out">running…</pre>
+</div>
+<script>
+/* Exercises every registered ability and reports the result of each.
+   Written in ES5 so this file always parses in miniblink's engine. */
+var out = document.getElementById('out');
+var lines = [];
+
+function log(line, cls) {
+  lines.push(cls ? '<span class="' + cls + '">' + line + '</span>' : line);
+  out.innerHTML = lines.join('\n');
+  console.log('SWEEP ' + line.replace(/<[^>]*>/g, ''));
+}
+
+function callSync(name, args) {
+  try {
+    return JSON.parse(window.__blinkInvoke(name, JSON.stringify(args || {})));
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+var pending = {}, nextId = 0;
+window.__blinkDispatch = function (event) {
+  if (event.type === 'invoke-result' && pending[event.callId]) {
+    var fn = pending[event.callId];
+    delete pending[event.callId];
+    fn(event.ok ? { ok: true, value: event.value } : { ok: false, error: event.error });
+  }
+};
+function callAsync(name, args) {
+  return new Promise(function (resolve) {
+    var id = 'c' + nextId++;
+    pending[id] = resolve;
+    window.__blinkInvokeAsync(name, JSON.stringify(args || {}), id);
+    setTimeout(function () {
+      if (pending[id]) { delete pending[id]; resolve({ ok: false, error: 'timeout' }); }
+    }, 8000);
+  });
+}
+
+function brief(value) {
+  var s = JSON.stringify(value);
+  if (s === undefined) return 'undefined';
+  return s.length > 74 ? s.slice(0, 74) + '…' : s;
+}
+
+function record(name, result) {
+  var pad = name;
+  while (pad.length < 22) pad += ' ';
+  if (result.ok) log(pad + 'ok    ' + brief(result.value), 'ok');
+  else log(pad + 'FAIL  ' + result.error, 'no');
+  return result.ok;
+}
+
+/* Synchronous sweep. Anything opening a dialog or terminating a process is
+   deliberately left out — this must run unattended. */
+var syncCases = [
+  ['config.set',      { key: 'sweep', value: 'hello' }],
+  ['config.get',      { key: 'sweep' }],
+  ['config.all',      {}],
+  ['nsis.functions',  {}],
+  ['win.setCloseGuard', { enabled: false }],
+  ['ui.taskbarProgress', { percent: 42 }],
+  ['win.center',      {}],
+  ['win.resize',      { width: 820, height: 620 }]
+];
+
+var passed = 0, failed = 0;
+log('=== sync ===');
+for (var i = 0; i < syncCases.length; i++) {
+  if (record(syncCases[i][0], callSync(syncCases[i][0], syncCases[i][1]))) passed++;
+  else failed++;
+}
+
+/* Asynchronous sweep, including the registry round trip. */
+var asyncCases = [
+  ['sys.osVersion',    {}],
+  ['sys.fonts',        {}],
+  ['sys.expandEnv',    { value: '%TEMP%\\probe' }],
+  ['fs.drives',        {}],
+  ['fs.diskSpace',     { path: 'C:\\this\\path\\does\\not\\exist\\yet' }],
+  ['fs.exists',        { path: 'C:\\Windows' }],
+  ['proc.exists',      { name: 'explorer.exe' }],
+  ['reg.write',        { root: 'HKCU', key: 'Software\\BlinkInstallerSweep', name: 'v', value: 'written' }],
+  ['reg.read',         { root: 'HKCU', key: 'Software\\BlinkInstallerSweep', name: 'v' }],
+  ['reg.write',        { root: 'HKCU', key: 'Software\\BlinkInstallerSweep', name: 'n', value: 1234 }],
+  ['reg.read',         { root: 'HKCU', key: 'Software\\BlinkInstallerSweep', name: 'n' }],
+  ['reg.delete',       { root: 'HKCU', key: 'Software\\BlinkInstallerSweep' }],
+  ['reg.read',         { root: 'HKCU', key: 'Software\\BlinkInstallerSweep', name: 'v' }],
+  ['nsis.call',        { name: 'sayHello' }],
+  ['config.get',       { key: 'nsisSaid' }],
+  ['config.persist',   {}]
+];
+
+function runAsync(index) {
+  if (index >= asyncCases.length) {
+    log('');
+    log('=== ' + passed + ' ok, ' + failed + ' failed ===', failed ? 'no' : 'ok');
+    /* Abilities intentionally not swept: fs.pickDirectory, ui.messageBox,
+       shell.*, proc.kill, win.close/minimize/startDrag, installer.next —
+       each needs a human or would end the process. */
+    return;
+  }
+  var name = asyncCases[index][0], args = asyncCases[index][1];
+  callAsync(name, args).then(function (r) {
+    if (record(name, r)) passed++; else failed++;
+    runAsync(index + 1);
+  });
+}
+
+log('');
+log('=== async ===');
+runAsync(0);
+</script>
+</body>
+</html>

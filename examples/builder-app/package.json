@@ -1,0 +1,29 @@
+{
+  "name": "builder-app",
+  "version": "3.4.0",
+  "private": true,
+  "description": "electron-builder integration example for blink-installer",
+  "author": "Example Corp",
+  "main": "src/main.js",
+  "scripts": {
+    "pack": "electron-builder --dir",
+    "make": "npm run pack && blink-installer build"
+  },
+  "devDependencies": {
+    "blink-installer": "0.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.example.builderdemo",
+    "productName": "Builder Demo",
+    "directories": {
+      "output": "out"
+    },
+    "win": {
+      "target": "dir"
+    },
+    "electronVersion": "33.4.11",
+    "npmRebuild": false
+  }
+}

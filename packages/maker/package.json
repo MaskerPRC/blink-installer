@@ -1,0 +1,45 @@
+{
+  "name": "blink-installer-maker",
+  "version": "0.1.1",
+  "description": "Electron Forge maker that builds an installer with an HTML/CSS/JS user interface.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "electron",
+    "electron-forge",
+    "maker",
+    "installer",
+    "nsis"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "blink-installer-core": "0.1.1"
+  },
+  "peerDependencies": {
+    "@electron-forge/maker-base": ">=7.0.0"
+  },
+  "author": "loopsaaage <maskerprc@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaskerPRC/blink-installer.git",
+    "directory": "packages/maker"
+  },
+  "homepage": "https://github.com/MaskerPRC/blink-installer#readme",
+  "bugs": {
+    "url": "https://github.com/MaskerPRC/blink-installer/issues"
+  }
+}

@@ -1,0 +1,282 @@
+/*
+ * Default installer skin.
+ *
+ * IMPORTANT — target engine: miniblink's renderer is Blink from the Chromium
+ * 57-60 era. Several things you would reach for by reflex do not exist there
+ * and fail silently, taking the layout with them:
+ *
+ *   inset:            Chrome 87   -> use top/right/bottom/left
+ *   gap: (flexbox)    Chrome 84   -> use margins
+ *   accent-color:     Chrome 93   -> style the control yourself
+ *   aspect-ratio:     Chrome 88
+ *   :is() / :where()  Chrome 88
+ *   position: sticky  Chrome 91 (for flex children)
+ *
+ * Custom properties, flexbox, transitions, gradients and border-radius are all
+ * fine. Keep to those and the page renders identically here and in a modern
+ * browser, which makes developing against a normal browser tab practical.
+ *
+ * One more, and it bites in content rather than CSS: the engine draws nothing
+ * for characters above U+FFFF. Most pictorial emoji live there — U+1F551 and
+ * U+1F4AC render as blank, while U+270B and U+2709 are fine because they are
+ * inside the Basic Multilingual Plane. Icons that must be characters have to
+ * stay under U+FFFF; anything else wants an inline SVG.
+ *
+ * Sizes here are logical pixels. The native side reads the display scaling and
+ * zooms the page to match, so 14px is 14px-looking on a 150% laptop as well as
+ * a 100% desktop, and nothing in this file needs a media query for it.
+ *
+ * The window itself is layered and transparent, so `body` stays transparent
+ * and the visible surface is `.shell` — that is what gives rounded corners and
+ * a drop shadow a plain Win32 installer cannot have.
+ */
+:root {
+  --accent: #2f6feb;
+  --accent-hover: #3b7bf5;
+  --surface: #171b22;
+  --surface-raised: #1e232c;
+  --text: #e8edf3;
+  --text-dim: #93a1b0;
+  --border: rgba(255, 255, 255, 0.08);
+  --radius: 12px;
+
+  /* The in-page dialog behind ui.messageBox. Overriding these few variables
+     is usually all the theming it needs; restyling the .bk-dialog* classes
+     outright also works, since this file loads after the defaults. */
+  --bk-dialog-surface: var(--surface-raised);
+  --bk-dialog-text: var(--text);
+  --bk-dialog-text-dim: var(--text-dim);
+  --bk-dialog-border: var(--border);
+  --bk-dialog-accent: var(--accent);
+  --bk-dialog-radius: var(--radius);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+body {
+  font: 14px/1.6 "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+/* Inset from the window edge so the shadow has room to render.
+   Longhand rather than `inset:` — see the note at the top of this file. */
+.shell {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 8px 0 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.titlebar .app {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.chrome {
+  width: 34px;
+  height: 28px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chrome:hover { background: rgba(255, 255, 255, 0.09); color: var(--text); }
+#btn-close:hover { background: #d9433f; color: #fff; }
+
+.screen {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  padding: 26px 34px 24px;
+  overflow: hidden;
+}
+.screen.is-active { display: flex; }
+
+.hero { text-align: center; flex: none; }
+.hero h1 { margin: 14px 0 4px; font-size: 21px; font-weight: 600; }
+.subtitle { margin: 0; color: var(--text-dim); font-size: 13px; min-height: 20px; }
+
+.logo {
+  width: 62px;
+  height: 62px;
+  margin: 6px auto 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), #7a4dea);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+}
+.logo.spinning { animation: pulse 1.4s ease-in-out infinite; }
+.logo.done { background: linear-gradient(135deg, #23a35a, #14b8a6); }
+.logo.warn { background: linear-gradient(135deg, #d9713f, #c94f4f); }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(0.93); opacity: 0.75; }
+}
+
+.field { margin-top: 26px; flex: none; }
+.field > label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.path-row { display: flex; }
+.path-row input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  margin-right: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.hint { margin: 7px 0 0; font-size: 12px; color: var(--text-dim); }
+.hint.warn { color: #e0a23c; }
+
+button { font: inherit; }
+.ghost {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.ghost:hover { background: rgba(255, 255, 255, 0.07); }
+.ghost:disabled { opacity: 0.45; cursor: default; }
+.primary {
+  height: 40px;
+  min-width: 132px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary:hover { background: var(--accent-hover); }
+.primary:disabled { background: #3a4250; color: var(--text-dim); cursor: default; }
+.primary.danger { background: #c94f4f; margin-left: 10px; }
+.primary.danger:hover { background: #d75e5e; }
+.primary.danger:disabled { background: #3a4250; }
+
+/* Native select: styled minimally, since this engine ignores most of what a
+   modern stylesheet would do to one. */
+select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  margin-top: 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.check input { width: 15px; height: 15px; margin: 0 8px 0 0; cursor: pointer; }
+
+.actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+}
+.actions .check { margin-top: 0; flex: 1; }
+.agreement {
+  flex: 1;
+  margin: 0 16px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.agreement a { color: var(--accent); text-decoration: none; }
+.agreement a:hover { text-decoration: underline; }
+
+.progress { margin-top: auto; display: flex; align-items: center; }
+.bar {
+  flex: 1;
+  height: 7px;
+  margin-right: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), #7a4dea);
+  transition: width 0.22s ease;
+}
+.percent {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Long extraction paths: keep the tail visible, which is the informative end. */
+#install-detail {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: center;
+}

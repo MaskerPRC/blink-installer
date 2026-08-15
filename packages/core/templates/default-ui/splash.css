@@ -1,0 +1,151 @@
+/*
+ * Full-screen entrance animation — appearance only. splash.js owns the motion.
+ *
+ * Why JS rather than @keyframes: not because CSS animation is broken here. It
+ * works fine — all of @keyframes, transitions, canvas and SVG SMIL animate
+ * correctly on this engine, on both ordinary and full-screen layered windows
+ * (native/test/FINDINGS.md has the measurements). It is because the renderer
+ * presents at a hard ~33 fps while requestAnimationFrame fires at ~59 Hz, so
+ * one timeline in JS lets the loop run at the rate the screen can actually
+ * show, and lets the whole sequence be retuned in one place.
+ *
+ * Designed for 33 fps: large, slow, eased movement with trails and glows.
+ * Small fast translations judder badly at that rate.
+ *
+ * Everything not painted here stays transparent and the desktop shows through.
+ */
+
+/* Hidden unless the splash is running, which also stops splash.js measuring
+   anything when the feature is off. */
+#splash {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 50;
+}
+
+body.is-splash #splash,
+body.splash-done #splash {
+  display: block;
+}
+
+/*
+ * Shards. Long and bright rather than small and fast: at 33 fps a short bar
+ * moving quickly reads as a row of separate dots, while a long one reads as a
+ * streak. The box-shadow is static — it is the glow, not part of the motion.
+ */
+.shard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(120, 170, 255, 0) 0%, #7fb0ff 55%, #ffffff 100%);
+  box-shadow: 0 0 14px rgba(90, 150, 255, 0.85);
+  opacity: 0;
+}
+
+/* Two rings, staggered by splash.js, so the pulse has depth. */
+.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  margin: -130px 0 0 -130px;
+  border: 3px solid #6ea8ff;
+  border-radius: 50%;
+  box-shadow: 0 0 32px rgba(70, 130, 255, 0.55), inset 0 0 24px rgba(70, 130, 255, 0.35);
+  opacity: 0;
+}
+
+/*
+ * Halo behind the card. Much stronger than a tasteful web glow would be: on a
+ * transparent window this is composited over whatever the user has on screen,
+ * so a subtle gradient simply disappears. Still translucent enough that the
+ * desktop reads through it.
+ */
+.halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 900px;
+  height: 900px;
+  margin: -450px 0 0 -450px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(90, 150, 255, 0.72) 0%,
+    rgba(70, 110, 240, 0.45) 26%,
+    rgba(122, 77, 234, 0.22) 50%,
+    rgba(0, 0, 0, 0) 72%
+  );
+  opacity: 0;
+}
+
+/* Bright core at the point of convergence. */
+.core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  margin: -80px 0 0 -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #9cc4ff 35%, rgba(90, 150, 255, 0) 70%);
+  opacity: 0;
+}
+
+/* Wordmark, where the card's title will be. */
+.splash-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 520px;
+  margin: -60px 0 0 -260px;
+  text-align: center;
+  color: #ffffff;
+  opacity: 0;
+}
+.splash-mark .glyph {
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 16px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #4f8dff, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 18px 60px rgba(70, 130, 255, 0.7);
+}
+.splash-mark .name {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.75);
+}
+
+/*
+ * While the splash is up the card sits centred at its final size, so the later
+ * change of window bounds to that same rectangle moves nothing on screen.
+ *
+ * The offsets are written as inline styles by splash.js rather than through
+ * custom properties: `var()` in a margin is unreliable on this engine and
+ * silently left the card half its own size off-centre.
+ */
+body.is-splash .shell {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  opacity: 0;
+}

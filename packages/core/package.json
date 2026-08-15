@@ -1,0 +1,42 @@
+{
+  "name": "blink-installer-core",
+  "version": "0.1.1",
+  "description": "Builds Windows installers with an HTML/CSS/JS user interface, on top of NSIS and miniblink.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "test": "npm run build && node --experimental-strip-types --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "blink-installer-runtime": "0.1.1",
+    "blink-installer-ui": "0.1.1",
+    "esbuild": "^0.25.12",
+    "zod": "^3.23.8"
+  },
+  "author": "loopsaaage <maskerprc@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaskerPRC/blink-installer.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/MaskerPRC/blink-installer#readme",
+  "bugs": {
+    "url": "https://github.com/MaskerPRC/blink-installer/issues"
+  }
+}
