@@ -1,16 +1,12 @@
 # blink-installer
 
-Build Windows installers whose user interface is HTML, CSS and JavaScript.
+用 HTML、CSS、JavaScript 写 Windows 安装包界面。
 
-![A full-screen entrance animation converging into the installer card](docs/demo.gif)
+![全屏入场动画收敛为安装卡片](docs/demo.gif)
 
-NSIS does the compression, extraction and uninstall registration. miniblink
-renders the page. Your installer looks like a product instead of a wizard from
-1998, and you style it with CSS.
+压缩、解压、快捷方式、卸载注册由 NSIS 负责，界面由 miniblink 渲染。窗口是**透明分层窗口**，所以能有圆角、投影，以及直接画在桌面上的全屏动画——这些普通 Win32 安装程序做不到。动画和安装界面是**同一个窗口**：它收缩成卡片，不是切到第二个进程，所以画面不跳。
 
-Everything above is one transparent, per-pixel-alpha window: the animation
-plays over the desktop, then the same window becomes the installer. No second
-process, no reload, nothing visibly moves at the handoff.
+[English](README.en.md)
 
 ```
 npm i -D blink-installer
@@ -18,28 +14,20 @@ npx blink-installer init
 npx blink-installer build
 ```
 
-**Status:** working end to end — install, silent install and uninstall are all
-verified — but young. Interfaces may still move.
-
 ---
 
-## What it is
+## 它做什么
 
-A build tool. It takes a directory you have already packaged and wraps it in an
-installer:
+它不打包你的应用，只把**已经打好包的目录**套成安装程序：
 
 ```
-your packaged app  ─┐
-your HTML UI       ─┼─▶  blink-installer  ─▶  MyApp-Setup-1.2.3.exe
-your config        ─┘
+已打包目录（electron-builder 的 win-unpacked / electron-packager 输出 / 一个 exe 加若干 dll）
+        +  你的 HTML 界面
+        +  一份配置
+        ─────────────────────────▶  MyApp-Setup-1.2.3.exe
 ```
 
-It does not package your app. Electron users keep using electron-builder
-(`--dir`) or Electron Forge; traditional Win32 users just point at the folder
-holding their exe. That boundary is deliberate — there is no value in
-reimplementing what those tools already do well.
-
-## Quick start
+## 快速开始
 
 ```js
 // blink-installer.config.mjs
@@ -47,126 +35,120 @@ import { defineConfig } from 'blink-installer-core';
 
 export default defineConfig({
   appId: 'com.example.myapp',
-  productName: 'My App',
+  productName: '我的应用',
   version: '1.2.3',
-  publisher: 'Example Corp',
+  publisher: '某某公司',
 
-  source: 'out/myapp-win32-x64',   // already-packaged directory
+  source: 'dist/win-unpacked',   // 已打包好的目录
   exe: 'myapp.exe',
 
+  ui: './installer-ui',          // 省略则用自带模板
+  splash: { enabled: true },     // 全屏入场动画
+
   install: {
-    defaultDir: '$PROGRAMFILES\\My App',
+    defaultDir: '$LOCALAPPDATA\\Programs\\我的应用',
+    elevate: false,              // 每用户安装，免 UAC
     shortcuts: { desktop: true, startMenu: true },
-    elevate: true,
   },
 });
 ```
 
-```
-npx blink-installer build
-```
+`npx blink-installer init --eject-ui` 会把自带模板拷到你项目里，直接改。
 
-Omit `ui` and you get the bundled template: a three-screen installer with a
-directory picker, free-space check, progress and a completion screen. Run
-`npx blink-installer init --eject-ui` to copy it into your project and edit it.
+### 两种构建模式
 
-### Two build modes
-
-Compressing the payload dominates build time, and while you are working on the
-interface none of that work is for you. So use two scripts:
+压缩载荷占掉了绝大部分构建时间，而调界面时这部分工作跟你无关。所以分两条命令：
 
 ```json
-"installer:dev":     "blink-installer build --ui-only --compression zlib",
+"installer:dev":     "blink-installer build --ui-only --compression zlib --out dist/preview.exe",
 "installer:release": "blink-installer build --compression lzma"
 ```
 
-`--ui-only` swaps your application for a placeholder. Everything else is real —
-the generated script, the pages, the progress wiring, the uninstaller — so you
-can run the result and click through the whole flow. On a 1.1 GB Electron app
-this is the difference between a couple of seconds and well over a minute per
-iteration. The artifact is a preview and not something to ship; give it its own
-`--out` path so it cannot be mistaken for a release.
+`--ui-only` 把应用换成占位文件，其余全是真的（真 NSIS 脚本、真页面、真进度、真卸载器），能跑完整流程。**它还会自动隔离**：装到独立目录、独立注册表键、关掉快捷方式，所以预览包不可能覆盖你已装的正式版。
 
-`--compression` trades size against time, and the spread is wide: on that same
-payload, `zlib` took 79 s to produce 496 MB while `lzma` took about eight
-minutes to produce 397 MB. Release builds want `lzma` — it is also what
-electron-builder's own NSIS target uses, so choosing anything else is where a
-surprising size difference between the two will come from.
+实测（1.1 GB 的 Electron 应用）：
 
-## Electron Forge
+| | 耗时 | 体积 |
+|---|---|---|
+| `--ui-only --compression zlib` | 3 秒 | 13 MB |
+| `--compression zlib` | 79 秒 | 496 MB |
+| `--compression lzma` | 450 秒 | 401 MB |
 
-A custom maker, so `electron-forge make` produces the installer directly:
+发布用 `lzma`——electron-builder 自带的 NSIS 也是这个，选别的就是你俩体积差异的来源。
 
-```js
-// forge.config.js
-module.exports = {
-  makers: [
-    {
-      name: 'blink-installer-maker',
-      config: {
-        appId: 'com.example.myapp',
-        ui: './installer-ui',
-      },
-    },
-  ],
-};
-```
+---
 
-Product name, version, publisher and the executable name are taken from what
-Forge already knows; anything in `config` overrides them.
+## 让 AI agent 帮你集成
 
-## electron-builder
+把下面整段复制到 Claude Code / Cursor / Codex 之类的编码 agent 里，它会读懂你的项目，然后生成配套的动画、对话框和安装流程。
 
-Build the unpacked directory, then hand it over:
+> 提示语里带了这个渲染引擎的全部硬约束。少了它们，agent 会写出在普通浏览器里好好的、到安装包里却空白或塌掉的界面。
 
-```
-electron-builder --dir
-npx blink-installer build
-```
+````markdown
+请为本项目集成 blink-installer，做一个用 HTML/CSS/JS 写界面的 Windows 安装包。
 
-with `source: 'dist/win-unpacked'` in your config.
+## 第一步：先读懂这个项目
+在动手之前，先看 README、package.json、主进程入口和产品文案，弄清楚：
+这个产品是做什么的、卖点是什么、面向谁、有没有品牌色和图标、名字与版本号从哪里取。
+安装界面和动画必须由这些**具体内容**长出来，不要套通用模板。
 
-## What it costs
+## 第二步：装并初始化
+npm i -D blink-installer
+npx blink-installer init --eject-ui
 
-Measured with an 11 KB payload, so these numbers are the framework itself.
+## 第三步：写配置 blink-installer.config.mjs
+- version 和 productName 从 package.json 现算，不要写死（写死必然漂）
+- source 指向已打包目录（electron-builder 是 dist/<out>/win-unpacked）
+- exe 是该目录下的主程序文件名
+- 装 $LOCALAPPDATA 就设 elevate: false（免 UAC，体验好得多）；装 $PROGRAMFILES 才需要 true
+- output 若要替换现有安装包，就对齐原来的产物命名规则
 
-**Installer size**
+## 第四步：设计界面（重点）
+在 installer-ui/ 下做三样东西，都要贴合这个产品：
 
-| Compression | With HTML uninstaller | Without | Build time |
-| --- | --- | --- | --- |
-| `lzma` (default) | **6.09 MB** | 5.96 MB | ~9 s |
-| `bzip2` | 7.32 MB | — | ~1 s |
-| `zlib` | 7.88 MB | 7.73 MB | ~1 s |
+1. **入场动画**（splash.js / splash.css）
+   全屏、透明、画在桌面上。用产品自己的意象，别用无意义的粒子。
+   例如协作类产品可以让多个节点汇聚成一个中心；工具类可以让零件组装成形。
+   时长 2~3 秒，结束后调 win.setBounds 把窗口收成安装卡片。
 
-**Disk after install**
+2. **安装流程界面**（index.html / main.js / style.css）
+   欢迎页讲清楚这个产品是什么、装完能干什么；
+   带安装路径选择与磁盘空间校验；安装中显示进度并轮播产品能力；完成页给下一步动作。
 
-| | With HTML uninstaller | Without |
-| --- | --- | --- |
-| Added to the install directory | **17.20 MB** | **0.05 MB** |
-| | `node.dll` 17.85 MB + `Uninstall.exe` 169 KB | `Uninstall.exe` 39 KB |
+3. **对话框**
+   用 ui.messageBox，它是页内绘制的，通过 --bk-dialog-* 变量调成产品配色。
+   退出确认、覆盖安装确认、卸载原因询问都走它。
 
-Nearly all of it is miniblink. Our own plugin is 300 KB and both pages together
-are 28 KB.
+## 渲染引擎的硬约束（务必遵守，否则静默失效）
+渲染器是 Chromium 57~60 时代的 Blink：
+- CSS 不能用：inset（改 top/right/bottom/left）、flex 的 gap（改 margin）、
+  accent-color、aspect-ratio、:is()/:where()、flex 子项上的 position: sticky
+- JS 语法会被 Babel 自动降级，可以正常写；但 Object.entries 和 String.padStart
+  是运行时缺失、编译不掉，绝对不要用
+- **U+FFFF 以上的字符渲染为空白**。绝大多数彩色 emoji 在此列（🕑 U+1F551、
+  💬 U+1F4AC 都是空白），只能用基本多文种平面内的符号（✋ U+270B、✉ U+2709 可以），
+  或者内联 SVG
+- 呈现帧率硬上限约 33fps。动画要用大幅度、慢速、带缓动的运动，避免细碎快速位移
+- 尺寸一律写**逻辑像素**，原生层会按系统缩放自动放大并缩放页面，不要自己做 DPI 补偿
+- 透明窗口下 window.innerWidth 返回 0，要屏幕尺寸就调 sys.screen()
 
-The HTML uninstaller has a lopsided cost: it adds 0.13 MB to the download but
-17.15 MB on disk, because the uninstaller cannot carry its own renderer without
-doubling the installer, so the install parks one for it. If disk matters more
-than download, set `uninstall: { ui: false }` and the uninstaller falls back to
-NSIS's dialog with nothing left behind.
+## 第五步：验证
+package.json 加两条命令：
+  "installer:dev":     "blink-installer build --ui-only --compression zlib --out dist/preview.exe"
+  "installer:release": "blink-installer build --compression lzma"
+跑 installer:dev（几秒出包），实际运行产物，把整个流程点一遍再交付。
+````
 
-For an Electron app — typically 150–300 MB — this is noise. For a 2 MB native
-app it is not, and that is the honest trade for having a browser render your
-installer.
+---
 
-## Writing the UI
+## 写界面
 
-Your page is an ordinary web page. It talks to the installer through a typed
-API:
+页面就是普通网页，通过一套带类型的 API 和安装程序对话：
 
 ```js
-import { installer, config, fs, proc, win } from 'blink-installer-ui';
+import { installer, config, fs, proc, win, ui } from 'blink-installer-ui';
 
-const dir = await fs.pickDirectory({ title: 'Choose a folder' });
+const dir = await fs.pickDirectory({ title: '选择安装位置' });
 config.set('installDir', dir);
 
 installer.on('progress', ({ percent }) => bar.style.width = percent + '%');
@@ -175,267 +157,136 @@ installer.on('log', ({ message }) => detail.textContent = message);
 document.querySelector('#install').onclick = () => installer.begin();
 ```
 
-### Asking the user something
+### 对话框
 
-`ui.messageBox` draws in the page, not through Win32, so a confirmation looks
-like the rest of your installer instead of a grey system dialog dropped into
-the middle of it:
+`ui.messageBox` 画在页面里，不走 Win32，所以确认框和界面其余部分是一套东西：
 
 ```js
 const answer = await ui.messageBox({
-  title: 'Quit setup?',
-  message: 'Installation is in progress. Leaving now leaves it incomplete.',
+  title: '退出安装？',
+  message: '安装正在进行中，此时退出会留下不完整的安装。',
   buttons: 'yesNo',
   icon: 'warning',
 });
 if (answer === 'yes') win.close(true);
 ```
 
-Three levels of control, in the order you are likely to need them:
+三层控制：默认样式直接能用（按钮文案跟随系统语言）→ 覆盖 `--bk-dialog-surface`、`--bk-dialog-accent` 等变量调色 → 重写 `.bk-dialog*` 类，或用 `ui.setDialogRenderer(fn)` 整个接管。
 
-1. **Nothing.** The defaults suit a dark card and the button labels follow the
-   engine locale (English, or Chinese when it reports `zh`).
-2. **Custom properties.** Override `--bk-dialog-surface`, `--bk-dialog-accent`,
-   `--bk-dialog-radius` and friends to match your palette. The ejected template
-   already wires these to its own theme variables.
-3. **Your own markup.** Restyle the `.bk-dialog*` classes — your stylesheet
-   loads after the defaults, so source order is enough and you do not need
-   `!important` — or hand over the whole thing with
-   `ui.setDialogRenderer(fn)` and resolve the answer yourself.
-   `ui.setDialogLabels({ ok: '知道了' })` covers the common case of just wanting
-   different words.
+`ui.messageBoxNative` 保留了原生弹窗，用于页面还没法绘制的早期失败。
 
-`ui.messageBoxNative` still reaches the Win32 box. Keep it for failures early
-enough that the page cannot be trusted to draw — asking a broken page to render
-its own error report does not work.
+### 屏幕缩放
 
-### Display scaling
+配置和 CSS 里写的都是**逻辑像素**。安装程序启动时读一次系统缩放，据此定窗口大小并缩放页面，所以 `width: 880` 和 `font-size: 14px` 在 150% 的笔记本和 100% 的台式机上观感一致，不需要媒体查询，也不要自己补偿。
 
-Sizes in your config and your CSS are **logical pixels**. The installer reads
-the system scaling once at startup, sizes the window accordingly and zooms the
-page to match, so `width: 880` and `font-size: 14px` look the same on a 150%
-laptop as on a 100% desktop. You do not need a media query and you should not
-compensate by hand.
+`sys.screen()` 返回的同样是逻辑像素，`win.setBounds` / `win.resize` 收的也是，所以拿屏幕矩形和 CSS 尺寸一起做运算不会错位。真需要设备像素时用 `sys.screen().scale`。
 
-The same applies across the boundary: `sys.screen()` reports logical pixels and
-`win.setBounds` / `win.resize` take them, so arithmetic mixing a CSS size with a
-screen rectangle stays consistent. `sys.screen().scale` exposes the factor for
-the rare case you genuinely need device pixels.
+### 入场动画
 
-### Entrance animation
+`splash: { enabled: true }` 让窗口先铺满工作区、带逐像素透明地播一段动画，没画到的地方就是透明的，桌面透出来；播完同一个窗口收成安装卡片。
 
-`splash: { enabled: true }` opens the window covering the work area with
-per-pixel alpha and plays an animation before the installer appears. Everything
-the animation does not draw is transparent — the desktop shows through — and
-when it finishes the same window shrinks to the installer card. One window, no
-reload, nothing visibly moves at the handoff.
+**帧率**：miniblink 的呈现被硬限制在约 **33fps**，而 `requestAnimationFrame` 以 59Hz 触发——页面算出的帧约有一半从未上屏。这个调不动：五个 miniblink 版本（2017~2021）、各种窗口尺寸、开不开逐像素透明、改 `drawMinInterval`，结果都一样。`native/test/FINDINGS.md` 有测量数据。
 
-The bundled template converges light streaks into a glowing core, pulses two
-rings, raises the wordmark and fades the card in over about 2.2 seconds. Edit
-`splash.js` and `splash.css` in your ejected UI to replace it. If it throws or
-overruns `splash.timeoutMs`, the window falls back to the installer rather than
-leaving a full-screen transparent window on the user's desktop.
+按这个来设计：大幅、慢速、带拖尾和辉光的运动在 33fps 下很好看；细碎的快速位移会顿。把动画循环跑得更快只是烧 CPU。
 
-**Frame rate.** miniblink presents at a hard **~33 fps** while
-`requestAnimationFrame` fires at ~59 Hz, so about half of the frames a page
-computes are never shown. This is not tunable: it is identical across five
-miniblink releases from 2017 to 2021, at every window size, with or without
-per-pixel alpha, and regardless of the `drawMinInterval` debug config.
-`native/test/FINDINGS.md` has the measurements.
+### 引擎老，这点很重要
 
-Design for it. Large, slow, eased movement with trails and glows reads fine at
-33 fps; small fast translations judder. Driving your animation loop faster than
-that only burns CPU.
+miniblink 报的是 `Chrome/60`，但 JS 解析器比这更旧。实测**没有**解构、默认参数、对象展开、`async`/`await`、类字段、`?.`、`??`、`**`、可选 catch 绑定；**有**类、生成器、箭头函数、`let`、模板字符串、`Promise`、`Map`/`Set`、`for...of`。
 
-### The engine is old — this matters
+你不用管：构建链先 esbuild 再 Babel，上面这些全部降级，正常写现代 JavaScript 即可。只有两个是运行时缺失、编译不掉——**别用 `Object.entries` 和 `String.padStart`**。
 
-miniblink's renderer claims `Chrome/60` but its JavaScript parser is older than
-that. Measured directly, it has **no** destructuring, default parameters,
-object spread, `async`/`await`, class fields, `?.`, `??`, `**`, or optional
-catch binding. It *does* have classes, generators, arrow functions, `let`,
-template literals, `Promise`, `Map`/`Set` and `for...of`.
+CSS 不做转译，避开 flex 子项上的 `position: sticky`，2017 年之后的特性用前先确认。
 
-You do not have to care: the build runs esbuild and then Babel, lowering all of
-the above so you can write normal modern JavaScript. Two gaps are libraries
-rather than syntax and cannot be compiled away — **avoid `Object.entries` and
-`String.padStart`**.
+内容上还有一个坑：**U+FFFF 以上的字符画不出来**。绝大多数彩色 emoji 在那个区间，`🕑`(U+1F551)、`💬`(U+1F4AC) 是空白，而 `✋`(U+270B)、`✉`(U+2709) 正常。图标非要用字符就限制在基本多文种平面内，否则用内联 SVG。
 
-CSS is not transpiled, so avoid `position: sticky` on flex children and check
-anything newer than about 2017 before relying on it.
+---
 
-Content has one trap of its own: **characters above U+FFFF draw as nothing**.
-Most pictorial emoji live up there, so `🕑` (U+1F551) and `💬` (U+1F4AC) come
-out blank while `✋` (U+270B) and `✉` (U+2709) are fine. If an icon has to be a
-character, keep it inside the Basic Multilingual Plane; otherwise use an inline
-SVG.
+## 配置
 
-`native/test/` holds the probe page that produced these results; point it at a
-different miniblink build to re-measure.
-
-## Configuration
-
-| Field | Meaning |
+| 字段 | 含义 |
 | --- | --- |
-| `appId` | Reverse-DNS id; used for the uninstall registry key |
-| `productName`, `version`, `publisher` | Shown in the UI and in file properties |
-| `source` | The packaged directory to install |
-| `exe` | Main executable, relative to `source` |
-| `output` | Installer path (default `dist/<product>-Setup-<version>.exe`) |
-| `ui` | Directory containing `index.html`; omit for the bundled template |
-| `icon` | `.ico` for setup.exe and Programs and Features |
-| `window` | `width`, `height`, `transparent` |
-| `splash.enabled` | Full-screen entrance animation before the installer (default `false`) |
-| `splash.timeoutMs` | Backstop if the animation hangs (default 6000) |
-| `install.defaultDir` | May use NSIS variables such as `$PROGRAMFILES` |
-| `install.elevate` | `true` requires admin and installs machine-wide (HKLM); `false` is per-user (HKCU) |
-| `install.shortcuts` | `desktop`, `startMenu`, `startMenuFolder` |
-| `install.uninstallEntry` | Generate an uninstaller and register it |
-| `uninstall.ui` | Give the uninstaller the same HTML interface (default `true`; see the size table) |
-| `compression` | `lzma` (smallest), `bzip2`, `zlib` (fastest build) |
-| `sign` | Authenticode signing; omit to ship unsigned |
-| `nsis.include` | Path to an `.nsh` injected into the generated script |
+| `appId` | 反向域名标识，用于卸载注册表项 |
+| `productName` / `version` / `publisher` | 界面与文件属性里显示 |
+| `source` | 要安装的已打包目录 |
+| `exe` | 主程序，相对 `source` |
+| `output` | 安装包路径，默认 `dist/<product>-Setup-<version>.exe` |
+| `ui` | 含 `index.html` 的目录，省略则用自带模板 |
+| `icon` | setup.exe 与「程序和功能」里的 `.ico` |
+| `window` | `width`、`height`、`transparent` |
+| `splash` | `enabled`、`timeoutMs`（动画卡住时的兜底） |
+| `install.defaultDir` | 可用 `$PROGRAMFILES`、`$LOCALAPPDATA` 等 NSIS 变量 |
+| `install.elevate` | `true` 需管理员、装全机（HKLM）；`false` 为每用户（HKCU） |
+| `install.shortcuts` | `desktop`、`startMenu`、`startMenuFolder` |
+| `install.uninstallEntry` | 生成卸载程序并注册 |
+| `uninstall.ui` | 卸载程序也用你的 HTML 界面（默认 `true`） |
+| `compression` | `lzma`（最小）、`bzip2`、`zlib`（最快） |
+| `sign` | 代码签名，省略则不签 |
+| `nsis.include` | 注入生成脚本的 `.nsh`，逃生舱 |
 
-## Signing
+## 代码签名
 
-An unsigned installer gets a SmartScreen warning on every download until enough
-people click through it, so this matters more than it looks.
+不签名的安装包每次下载都会触发 SmartScreen 警告，直到足够多人点过「仍要运行」。
 
-If you already package with electron-builder you almost certainly have a signing
-hook, and this takes the same shape as its `win.signtoolOptions.sign`. Point at
-the file you have:
+如果你已经在用 electron-builder，多半已经有一个签名钩子，而这里的形状和它的 `win.signtoolOptions.sign` **完全一致**——直接指过去：
 
 ```js
 sign: { hook: './electron/sign-win.cjs' }
 ```
 
-Signing setups accumulate detail that is expensive to rediscover — cloud
-certificates with no exportable key, sessions that lapse mid-build, timeouts for
-prompts an unattended build cannot answer. Reusing the hook keeps one
-implementation rather than two that drift.
+签名这套东西会沉淀很多踩出来的细节（云证书没有可导出的私钥、会话中途过期、无人值守构建答不了的弹窗要靠超时兜住）。复用同一个钩子，就不会有两份实现慢慢走岔。
 
-With nothing yet, drive signtool directly. A certificate in the Windows store,
-by thumbprint — the only option for a cloud/HSM certificate:
+没有现成钩子就直接驱动 signtool。按指纹从证书store里取（云/HSM 证书唯一可行的方式）：
 
 ```js
 sign: { thumbprint: 'C3C1…91ED', timestamp: 'http://time.certum.pl' }
 ```
 
-or a file, with the password from the environment rather than the config:
+或者用证书文件，密码走环境变量而不是写进配置：
 
 ```js
 sign: { certificateFile: './cert.pfx' }   // BLINK_SIGN_PASSWORD=…
 ```
 
-By default a build that cannot sign warns loudly and ships unsigned, so a lapsed
-session still gives you something to test. Set `sign.required: true` for release
-runs, where shipping unsigned is worse than not shipping.
+默认签不上就大声警告、照常出不签名的包，这样会话过期也还有东西可测。正式发版设 `sign.required: true`，让它直接失败。
 
-**The uninstaller is not signed.** NSIS writes it during installation, on the
-user's machine, so at build time there is no file to sign. A signed one needs a
-two-pass build; the installer is what SmartScreen judges on download.
+**卸载程序不签名**：NSIS 是在用户机器上安装时才写出它的，构建期不存在这个文件。要签得做两遍构建；而 SmartScreen 判定的是用户下载的那个安装包。
 
-## The uninstaller
+## 卸载程序
 
-By default the uninstaller gets the same treatment as the installer: your own
-HTML, a confirmation screen, progress, and a completion screen. The bundled
-template also asks an optional "why are you uninstalling?" question and records
-the answer in the shared store before it is torn down.
+默认和安装程序一套待遇：你的 HTML、确认页、进度、完成页。代价是安装目录里要常驻一份渲染器（约 17 MB）供卸载时用。`uninstall: { ui: false }` 关掉，退回 NSIS 自带对话框，磁盘上不留额外东西。
 
-It comes from `uninstall.html` in your UI directory, alongside `index.html`, so
-both pages share one stylesheet. If that file is absent — say you pointed `ui`
-at a directory with only an installer page — the uninstaller quietly falls back
-to NSIS's own dialog rather than failing the build.
+## 静默安装
 
-Set `uninstall: { ui: false }` to skip it entirely and leave nothing on disk.
+`/S` 跳过所有界面，`/D=路径` 指定安装目录（必须是最后一个参数，且不加引号）：
 
-## Calling your own NSIS code
-
-Register a script function and the page can invoke it by name:
-
-```nsis
-; via nsis.include
-Function InstallDriver
-  ExecWait '"$INSTDIR\driver\setup.exe" /quiet'
-FunctionEnd
-
-Function RegisterExtras
-  GetFunctionAddress $0 InstallDriver
-  blinkkit::RegisterAbility /NOUNLOAD "installDriver" $0
-FunctionEnd
 ```
+MyApp-Setup.exe /S /D=C:\Tools\MyApp
+```
+
+## 集成方式
+
+**Electron Forge**：
 
 ```js
-await nsis.call('installDriver');
+makers: [{ name: 'blink-installer-maker', config: { /* 同上面的配置 */ } }]
 ```
 
-The address stays in C++; the page only ever sees the name.
+**electron-builder**：先 `electron-builder --dir` 出 `win-unpacked`，再让 `blink-installer build` 接手。
 
-## Silent install
+**传统 Win32**：`source` 指向你放 exe 和 dll 的目录即可。
 
-Standard NSIS switches, for deployment:
-
-```
-MyApp-Setup-1.2.3.exe /S
-MyApp-Setup-1.2.3.exe /S /D=C:\Custom\Path
-"C:\Program Files\My App\Uninstall.exe" /S
-```
-
-## Troubleshooting
-
-Set `BLINKKIT_LOG` to a file path before running the installer. It records
-plugin calls, ability failures, and anything the page logs to `console` —
-including script errors, which are otherwise invisible because there is no
-devtools window:
-
-```
-set BLINKKIT_LOG=%TEMP%\blink.log
-MyApp-Setup-1.2.3.exe
-```
-
-Set `BLINKKIT_DEVTOOLS` to a miniblink front-end directory to open the
-inspector.
-
-## Packages
-
-| Package | Purpose |
-| --- | --- |
-| `blink-installer` | CLI |
-| `blink-installer-core` | Build pipeline and config schema |
-| `blink-installer-ui` | The API your page imports |
-| `blink-installer-maker` | Electron Forge maker |
-| `blink-installer-runtime` | Prebuilt binaries (plugin, miniblink, NSIS) |
-
-Binaries are shipped prebuilt rather than compiled on install: building them
-needs MSVC and a 32-bit toolchain, which is an unreasonable thing to ask of
-someone packaging an app and impossible on the Linux runners many people build
-Windows installers from.
-
-## Building from source
-
-Only needed if you are changing the C++ side.
+## 从源码构建
 
 ```
 npm install
-npm run native:configure   # cmake -S native -B native/build -A Win32
-npm run native:build
-npm run build
+npm run build              # TypeScript 各包
+npm run native:configure   # CMake，x86
+npm run native:build       # 产出 blinkkit.dll
+npm test
 ```
 
-Requires Visual Studio with the C++ workload. The plugin **must** be x86: the
-NSIS stub is 32-bit and the miniblink binary is 32-bit only.
+需要 Visual Studio（含 C++ 桌面开发工作负载）与 CMake。运行时二进制已随仓库提交，所以克隆下来离线也能构建。
 
-## Notes on the design
+## 许可
 
-- The installer is a 32-bit process. That is normal for installers and fine for
-  installing 64-bit applications, but registry access goes through
-  `KEY_WOW64_64KEY` so a per-app key lands where the 64-bit app will look for it.
-- NSIS unloads a plugin DLL as soon as a call returns unless `/NOUNLOAD` is
-  given. Every generated call carries it; without it the window, the ability
-  registry and the shared config would be destroyed between statements.
-- Generated `.nsi` files are UTF-8 **with BOM**. NSIS 3 otherwise reads them in
-  the system ANSI code page and rejects the first non-ASCII byte, which any
-  non-English product name will have.
-
-## Licence
-
-MIT. Bundles NSIS (zlib/libpng licence) and miniblink.
+本项目 MIT。分发的第三方二进制按各自许可：miniblink 为 Apache-2.0，NSIS 为 zlib/libpng（其 LZMA 模块为 CPL-1.0）。详见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

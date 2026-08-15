@@ -11,7 +11,8 @@
   "files": [
     "dist",
     "THIRD-PARTY-NOTICES.md",
-    "docs"
+    "docs",
+    "README.en.md"
   ],
   "keywords": [
     "installer",
