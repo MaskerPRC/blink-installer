@@ -1,18 +1,63 @@
+<div align="center">
+
 # blink-installer
 
-用 HTML、CSS、JavaScript 写 Windows 安装包界面。
+### 应用打磨了半年，用户第一眼看到的，是一个 1998 年的灰色向导。
+
+**用 HTML、CSS、JavaScript 写 Windows 安装包界面。**
+
+[![npm](https://img.shields.io/npm/v/blink-installer?color=%2312b866&label=npm)](https://www.npmjs.com/package/blink-installer)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![platform](https://img.shields.io/badge/Windows-7%20%E2%86%92%2011-0078d4)
+![size](https://img.shields.io/badge/%E6%A1%86%E6%9E%B6%E5%BC%80%E9%94%80-6%20MB-lightgrey)
+
+[English](README.en.md)
 
 ![全屏入场动画收敛为安装卡片](docs/demo.gif)
 
-压缩、解压、快捷方式、卸载注册由 NSIS 负责，界面由 miniblink 渲染。窗口是**透明分层窗口**，所以能有圆角、投影，以及直接画在桌面上的全屏动画——这些普通 Win32 安装程序做不到。动画和安装界面是**同一个窗口**：它收缩成卡片，不是切到第二个进程，所以画面不跳。
+</div>
 
-[English](README.en.md)
+---
+
+## 受够了吧
+
+- 想挪一个按钮，得在 `nsDialogs` 里手算像素坐标，改一次编译一次
+- 想加个入场动画——没有这个东西，NSIS 的界面模型里压根不存在
+- 全世界的 Inno Setup 安装包长得一模一样，你的产品也一样
+- 弹个「确定要退出吗」，出来的是 Windows 95 同款灰底方框
+- 改一行文案，要先学一门只有写安装包才用得上的 DSL
+- 前端同事想帮忙？帮不上，这里没有 CSS
+
+**而你已经会写网页了。**
+
+```html
+<button class="primary" id="install">开始安装</button>
+```
+
+```js
+import { installer, fs } from 'blink-installer-ui';
+
+document.querySelector('#install').onclick = () => installer.begin();
+installer.on('progress', ({ percent }) => bar.style.width = percent + '%');
+```
+
+就这样。圆角、渐变、投影、`transition`、全屏动画、你自己的字体——**都是你平时怎么写就怎么写**。
 
 ```
 npm i -D blink-installer
 npx blink-installer init
 npx blink-installer build
 ```
+
+---
+
+## 凭什么能做到
+
+压缩、解压、快捷方式、卸载注册这些脏活由 **NSIS** 干，界面交给 **miniblink** 渲染（一个 Blink 内核，单文件 DLL，Win7 也能跑）。
+
+关键在于窗口是**透明分层窗口**：所以你能有圆角、投影，以及直接画在桌面上、四周全透明的全屏动画——这些普通 Win32 安装程序做不到。
+
+而且动画和安装界面**是同一个窗口**。它从全屏收缩成卡片，不是切到第二个进程，所以画面不跳、不闪、不重载。
 
 ---
 

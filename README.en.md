@@ -1,24 +1,75 @@
+<div align="center">
+
 # blink-installer
 
-Build Windows installers whose interface is HTML, CSS and JavaScript.
+### You spent six months on your app. The first thing anyone sees is a grey wizard from 1998.
+
+**Build Windows installers whose interface is HTML, CSS and JavaScript.**
+
+[![npm](https://img.shields.io/npm/v/blink-installer?color=%2312b866&label=npm)](https://www.npmjs.com/package/blink-installer)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![platform](https://img.shields.io/badge/Windows-7%20%E2%86%92%2011-0078d4)
+![size](https://img.shields.io/badge/framework%20overhead-6%20MB-lightgrey)
+
+[中文](README.md)
 
 ![A full-screen entrance animation converging into the installer card](docs/demo.gif)
 
-NSIS does compression, extraction, shortcuts and uninstall registration;
-miniblink renders the page. The window is **transparent with per-pixel alpha**,
-so the installer can have rounded corners, a drop shadow, and a full-screen
-animation played straight onto the desktop — none of which a stock Win32
-installer can do. The animation and the installer are the **same window**: it
-shrinks into the card rather than handing off to a second process, so nothing
-visibly jumps.
+</div>
 
-[中文](README.md)
+---
+
+## Sound familiar?
+
+- Moving a button means working out pixel coordinates in `nsDialogs`, then
+  recompiling to see whether you got it right
+- An entrance animation is not something you can do badly — it is not something
+  the NSIS interface model has at all
+- Every Inno Setup installer on earth looks identical, including yours
+- "Are you sure you want to quit?" arrives as a Windows 95 grey box
+- Changing one line of copy means learning a DSL you will never use anywhere
+  else
+- Your frontend colleague offers to help and cannot: there is no CSS here
+
+**And you already know how to build a web page.**
+
+```html
+<button class="primary" id="install">Install</button>
+```
+
+```js
+import { installer, fs } from 'blink-installer-ui';
+
+document.querySelector('#install').onclick = () => installer.begin();
+installer.on('progress', ({ percent }) => bar.style.width = percent + '%');
+```
+
+That is the whole idea. Rounded corners, gradients, shadows, `transition`, a
+full-screen animation, your own typeface — **written exactly the way you would
+write them anywhere else**.
 
 ```
 npm i -D blink-installer
 npx blink-installer init
 npx blink-installer build
 ```
+
+---
+
+## How it gets away with it
+
+**NSIS** does the unglamorous work — compression, extraction, shortcuts,
+uninstall registration — and **miniblink** renders the page: a Blink engine in
+a single DLL, old enough to still run on Windows 7.
+
+What makes the look possible is that the window is **transparent with
+per-pixel alpha**. That is where the rounded corners, the drop shadow, and the
+full-screen animation played straight onto the desktop come from — none of
+which a stock Win32 installer can do.
+
+And the animation and the installer are the **same window**. It shrinks from
+full screen into the card rather than handing off to a second process, so
+nothing jumps, flashes, or reloads.
 
 ---
 
