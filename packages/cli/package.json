@@ -1,6 +1,6 @@
 {
   "name": "blink-installer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Build Windows installers with an HTML/CSS/JS user interface.",
   "license": "MIT",
   "type": "module",
@@ -27,7 +27,7 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "blink-installer-core": "0.2.0"
+    "blink-installer-core": "0.2.1"
   },
   "author": "loopsaaage <maskerprc@gmail.com>",
   "repository": {

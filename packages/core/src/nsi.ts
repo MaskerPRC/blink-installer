@@ -113,7 +113,11 @@ OutFile "${nsisString(inputs.outputPath)}"
 InstallDir "${nsisExpandable(c.install.defaultDir)}"
 RequestExecutionLevel ${c.install.elevate ? 'admin' : 'user'}
 SetCompressor /SOLID ${c.compression}
-${inputs.iconPath ? `Icon "${nsisString(inputs.iconPath)}"` : ''}
+; UninstallIcon as well as Icon: without it the uninstaller keeps the stock
+; NSIS icon, and since the plugin gives a window the icon of the executable it
+; is running inside, the uninstaller's taskbar button would show that instead
+; of the product's.
+${inputs.iconPath ? `Icon "${nsisString(inputs.iconPath)}"\nUninstallIcon "${nsisString(inputs.iconPath)}"` : ''}
 
 ; The stub's own window is never shown — the page is the entire UI.
 SilentInstall normal

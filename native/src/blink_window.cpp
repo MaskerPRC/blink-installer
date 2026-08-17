@@ -1,5 +1,7 @@
 #include "blink_window.h"
 
+#include <shellapi.h>  // ExtractIconEx
+
 #include "ability.h"
 #include "config_store.h"
 #include "dpi.h"
@@ -63,6 +65,44 @@ std::string MakeEnvelope(const Json& value, const std::string& error) {
     envelope["error"] = Json(error);
   }
   return envelope.dump();
+}
+
+// Gives the window the setup executable's own icon.
+//
+// miniblink registers its window class without one, so the taskbar button and
+// Alt+Tab entry come up blank — the NSIS `Icon` directive only sets the icon
+// on the .exe *file*, which is what Explorer shows, not what a window carries.
+// Nothing sets WM_SETICON otherwise, and the two are unrelated.
+//
+// The icon is read back out of the running executable rather than shipped
+// alongside, so it always matches whatever the build embedded, and a product
+// that changes its icon does not have to remember a second place to change it.
+// ExtractIconEx takes the first icon group by index rather than by resource ID,
+// which is what makes this independent of how NSIS numbered it.
+void ApplyWindowIcon(HWND hwnd) {
+  if (!hwnd) return;
+
+  wchar_t exe_path[MAX_PATH] = {};
+  if (!::GetModuleFileNameW(nullptr, exe_path, MAX_PATH)) {
+    BK_LOG(Warn, "GetModuleFileName failed; window keeps the default icon");
+    return;
+  }
+
+  HICON large = nullptr;
+  HICON small = nullptr;
+  if (::ExtractIconExW(exe_path, 0, &large, &small, 1) == UINT_MAX ||
+      (!large && !small)) {
+    // A build with no icon configured is a legitimate state, not an error.
+    BK_LOG(Info, "no icon in the setup executable; leaving the default");
+    return;
+  }
+
+  // Deliberately not destroyed: these live as long as the window does, and the
+  // process is about to exit anyway. Freeing them here would blank the taskbar
+  // button, which is the bug this function exists to fix.
+  if (large) ::SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)large);
+  if (small) ::SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)small);
+  BK_LOG(Info, "window icon taken from the setup executable");
 }
 
 }  // namespace
@@ -159,6 +199,7 @@ bool BlinkWindow::Create(const Options& options) {
 
   hwnd_ = wkeGetWindowHandle(view_);
   wkeSetWindowTitleW(view_, options.title.c_str());
+  ApplyWindowIcon(hwnd_);
 
   // Make one CSS pixel cover `scale` physical ones, so a page written in
   // ordinary CSS units comes out the intended physical size. Without this the

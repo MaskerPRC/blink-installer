@@ -27,3 +27,8 @@ examples/**/*.png
 
 .DS_Store
 Thumbs.db
+
+# editors
+.idea/
+.vscode/
+*.swp
