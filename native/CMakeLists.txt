@@ -33,6 +33,7 @@ set(BLINKKIT_SOURCES
   src/task_queue.cpp
   src/config_store.cpp
   src/dpi.cpp
+  src/com.cpp
   src/ability.cpp
   src/blink_window.cpp
   src/taskbar.cpp

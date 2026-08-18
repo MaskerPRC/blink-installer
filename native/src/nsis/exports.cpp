@@ -9,6 +9,7 @@
 
 #include "ability.h"
 #include "blink_window.h"
+#include "com.h"
 #include "config_store.h"
 #include "json.h"
 #include "log.h"
@@ -32,6 +33,9 @@ UINT_PTR PluginCallbackProc(NSPIM message) {
   if (message == NSPIM_UNLOAD || message == NSPIM_GUIUNLOAD) {
     UnbindProgress();
     ReleaseTaskbar();
+    // After ReleaseTaskbar: the apartment has to outlive the COM objects
+    // created in it.
+    ShutdownUiThreadCom();
   }
   return 0;
 }

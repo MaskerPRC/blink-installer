@@ -3,6 +3,7 @@
 #include <shellapi.h>  // ExtractIconEx
 
 #include "ability.h"
+#include "com.h"
 #include "config_store.h"
 #include "dpi.h"
 #include "log.h"
@@ -136,6 +137,10 @@ bool BlinkWindow::LoadMiniblink(const std::wstring& dll_path) {
 }
 
 bool BlinkWindow::Create(const Options& options) {
+  // Before anything that might reach the shell. The folder picker and the
+  // taskbar indicator both need an apartment, and leaving it to chance is what
+  // made the picker's appearance vary between runs.
+  InitUiThreadCom();
   if (!TaskQueue::Get().InitOnUiThread()) return false;
   if (!LoadMiniblink(options.miniblink_dll)) return false;
 

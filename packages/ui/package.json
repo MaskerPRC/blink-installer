@@ -1,6 +1,6 @@
 {
   "name": "blink-installer-ui",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "The JavaScript API an installer page uses to talk to the native installer.",
   "license": "MIT",
   "type": "module",

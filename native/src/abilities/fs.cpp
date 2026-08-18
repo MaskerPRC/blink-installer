@@ -11,14 +11,24 @@
 namespace bk {
 namespace {
 
+// Why three states rather than a bool.
+//
+// "The user cancelled" and "this picker is not available here" both used to
+// come back as false, and the caller chained the two pickers with `&&`. So
+// cancelling the modern dialog opened the old one immediately behind it: two
+// dialogs for one request, and no way to decline. Cancel is an answer, not a
+// failure, and only a genuine unavailability may fall through.
+enum class PickOutcome { kPicked, kCancelled, kUnavailable };
+
 // Vista-and-later folder picker. Much better UX than SHBrowseForFolder: the
 // user gets a real explorer view with a path box and favourites.
-bool PickWithFileDialog(HWND owner, const std::wstring& title,
-                        const std::wstring& initial, std::wstring* out) {
+PickOutcome PickWithFileDialog(HWND owner, const std::wstring& title,
+                               const std::wstring& initial,
+                               std::wstring* out) {
   IFileOpenDialog* dialog = nullptr;
   HRESULT hr = ::CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
                                   IID_PPV_ARGS(&dialog));
-  if (FAILED(hr)) return false;
+  if (FAILED(hr)) return PickOutcome::kUnavailable;
 
   bool ok = false;
   DWORD options = 0;
@@ -37,7 +47,8 @@ bool PickWithFileDialog(HWND owner, const std::wstring& title,
     }
   }
 
-  if (SUCCEEDED(dialog->Show(owner))) {
+  const HRESULT shown = dialog->Show(owner);
+  if (SUCCEEDED(shown)) {
     IShellItem* result = nullptr;
     if (SUCCEEDED(dialog->GetResult(&result))) {
       PWSTR path = nullptr;
@@ -50,7 +61,16 @@ bool PickWithFileDialog(HWND owner, const std::wstring& title,
     }
   }
   dialog->Release();
-  return ok;
+
+  if (ok) return PickOutcome::kPicked;
+  // The documented result for closing or cancelling the dialog. This is the
+  // one case that must not fall through to the legacy picker.
+  if (shown == HRESULT_FROM_WIN32(ERROR_CANCELLED)) {
+    return PickOutcome::kCancelled;
+  }
+  // Shown but nothing usable came back, or it refused to open at all: let the
+  // fallback try, since the user has not actually been asked anything yet.
+  return PickOutcome::kUnavailable;
 }
 
 int CALLBACK BrowseCallback(HWND hwnd, UINT msg, LPARAM, LPARAM data) {
@@ -98,10 +118,16 @@ BK_ABILITY("fs.pickDirectory", kAbilityUiThread) {
   const std::wstring initial = Utf8ToWide(args["defaultPath"].as_string());
 
   std::wstring picked;
-  if (!PickWithFileDialog(ctx.hwnd, title, initial, &picked) &&
-      !PickWithShBrowse(ctx.hwnd, title, initial, &picked)) {
-    return Json();  // cancelled
+  PickOutcome outcome = PickWithFileDialog(ctx.hwnd, title, initial, &picked);
+
+  // Only when the modern picker never got to ask. A cancel is the user's
+  // answer and ends the request here.
+  if (outcome == PickOutcome::kUnavailable &&
+      PickWithShBrowse(ctx.hwnd, title, initial, &picked)) {
+    outcome = PickOutcome::kPicked;
   }
+
+  if (outcome != PickOutcome::kPicked) return Json();  // cancelled
   return Json(WideToUtf8(picked));
 }
 
