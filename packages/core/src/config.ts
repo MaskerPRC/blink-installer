@@ -37,6 +37,18 @@ const installSchema = z
     defaultDir: z.string().default('$PROGRAMFILES\\${PRODUCT_NAME}'),
     /** Whether the page may change the directory via fs.pickDirectory. */
     allowDirChange: z.boolean().default(true),
+    /**
+     * Force the pre-Vista SHBrowseForFolder tree box instead of the explorer
+     * folder picker.
+     *
+     * An escape hatch, not a style choice — the modern dialog is better in
+     * every way a user would notice. It exists because the explorer picker is
+     * hosted by the shell and so is exposed to whatever else is loaded into
+     * the process on a given machine; where a shell extension makes it hang or
+     * refuse to open, the old tree box still works because it asks far less of
+     * the shell. Reach for it only with a reproduction in hand.
+     */
+    legacyFolderPicker: z.boolean().default(false),
     shortcuts: shortcutsSchema,
     /** Register in Programs and Features, and generate an uninstaller. */
     uninstallEntry: z.boolean().default(true),

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ability.h"
+#include "config_store.h"
 #include "strings.h"
 
 namespace bk {
@@ -117,11 +118,22 @@ BK_ABILITY("fs.pickDirectory", kAbilityUiThread) {
   const std::wstring title = Utf8ToWide(args["title"].as_string());
   const std::wstring initial = Utf8ToWide(args["defaultPath"].as_string());
 
-  std::wstring picked;
-  PickOutcome outcome = PickWithFileDialog(ctx.hwnd, title, initial, &picked);
+  // `legacy` on the call, else install.legacyFolderPicker from the config.
+  // Per-call first so one screen can opt out without changing the build.
+  const bool legacy =
+      args.has("legacy")
+          ? args["legacy"].as_bool()
+          : ConfigStore::Get().String("legacyFolderPicker") == "1";
 
-  // Only when the modern picker never got to ask. A cancel is the user's
-  // answer and ends the request here.
+  std::wstring picked;
+  PickOutcome outcome = PickOutcome::kUnavailable;
+  if (!legacy) {
+    outcome = PickWithFileDialog(ctx.hwnd, title, initial, &picked);
+  }
+
+  // Only when the modern picker never got to ask — either it was skipped
+  // outright, or it could not open. A cancel is the user's answer and ends the
+  // request here rather than escalating to a second dialog.
   if (outcome == PickOutcome::kUnavailable &&
       PickWithShBrowse(ctx.hwnd, title, initial, &picked)) {
     outcome = PickOutcome::kPicked;

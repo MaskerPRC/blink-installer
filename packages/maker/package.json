@@ -1,6 +1,6 @@
 {
   "name": "blink-installer-maker",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Electron Forge maker that builds an installer with an HTML/CSS/JS user interface.",
   "license": "MIT",
   "type": "module",
@@ -27,7 +27,7 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "blink-installer-core": "0.2.2"
+    "blink-installer-core": "0.2.3"
   },
   "peerDependencies": {
     "@electron-forge/maker-base": ">=7.0.0"

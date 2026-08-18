@@ -247,8 +247,16 @@ export interface DriveInfo extends Partial<DiskSpace> {
 }
 
 export const fs = {
-  /** Opens a folder picker. Resolves to null when the user cancels. */
-  pickDirectory(options: { title?: string; defaultPath?: string } = {}) {
+  /**
+   * Opens a folder picker. Resolves to null when the user cancels.
+   *
+   * `legacy` forces the pre-Vista tree box for this call, overriding
+   * `install.legacyFolderPicker`. Only worth reaching for against a known
+   * failure of the explorer dialog on a particular machine.
+   */
+  pickDirectory(
+    options: { title?: string; defaultPath?: string; legacy?: boolean } = {},
+  ) {
     return invokeAsync<string | null>('fs.pickDirectory', options);
   },
   diskSpace(path: string) {

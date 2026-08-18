@@ -85,6 +85,18 @@ describe('installer script', () => {
     assert.match(script, /!include "WinMessages\.nsh"/);
   });
 
+  it('defaults the folder picker to the modern dialog', () => {
+    const script = renderInstallerScript(inputs());
+    assert.match(script, /SetConfig \/NOUNLOAD "legacyFolderPicker" "0"/);
+  });
+
+  it('passes install.legacyFolderPicker through to the plugin', () => {
+    const script = renderInstallerScript(
+      inputs({ install: { legacyFolderPicker: true } }),
+    );
+    assert.match(script, /SetConfig \/NOUNLOAD "legacyFolderPicker" "1"/);
+  });
+
   it('omits the shortcut commands that are turned off', () => {
     const script = renderInstallerScript(
       inputs({ install: { shortcuts: { desktop: false, startMenu: true } } }),

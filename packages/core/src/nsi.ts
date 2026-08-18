@@ -185,6 +185,7 @@ ${
   blinkkit::SetConfig /NOUNLOAD "exeName" "\${PRODUCT_EXE}"
   blinkkit::SetConfig /NOUNLOAD "installDir" "$INSTDIR"
   blinkkit::SetConfig /NOUNLOAD "allowDirChange" "${c.install.allowDirChange ? '1' : '0'}"
+  blinkkit::SetConfig /NOUNLOAD "legacyFolderPicker" "${c.install.legacyFolderPicker ? '1' : '0'}"
   blinkkit::SetConfig /NOUNLOAD "mode" "install"
   blinkkit::SetConfig /NOUNLOAD "splash" "${c.splash.enabled ? '1' : '0'}"
   blinkkit::SetConfig /NOUNLOAD "splashDebug" "${process.env.BLINK_SPLASH_DEBUG === '1' ? '1' : '0'}"

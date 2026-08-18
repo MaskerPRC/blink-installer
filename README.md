@@ -263,10 +263,25 @@ CSS 不做转译，避开 flex 子项上的 `position: sticky`，2017 年之后�
 | `install.elevate` | `true` 需管理员、装全机（HKLM）；`false` 为每用户（HKCU） |
 | `install.shortcuts` | `desktop`、`startMenu`、`startMenuFolder` |
 | `install.uninstallEntry` | 生成卸载程序并注册 |
+| `install.legacyFolderPicker` | 强制用 XP 时代的目录树选择框，见下 |
 | `uninstall.ui` | 卸载程序也用你的 HTML 界面（默认 `true`） |
 | `compression` | `lzma`（最小）、`bzip2`、`zlib`（最快） |
 | `sign` | 代码签名，省略则不签 |
 | `nsis.include` | 注入生成脚本的 `.nsh`，逃生舱 |
+
+### 关于 `install.legacyFolderPicker`
+
+选目录默认用资源管理器那个对话框（`IFileOpenDialog`）：有地址栏、有收藏夹、能直接粘路径。打开这个开关会换成 XP 时代那个 400 像素宽的目录树框（`SHBrowseForFolder`）。
+
+**这是逃生舱，不是风格选项。** 现代对话框由 shell 托管，也就等于把进程暴露给这台机器上加载的一切 shell 扩展——遇到某个第三方扩展让它卡住或打不开的时候，老的树框反而还能用，因为它对 shell 的要求少得多。手上有确切复现再打开它，不要因为"想要复古"。
+
+页面也可以单次覆盖，不用改构建：
+
+```js
+await fs.pickDirectory({ title: '选择安装位置', legacy: true });
+```
+
+两条路径的取消行为一致：**取消就结束**，不会再弹第二个对话框。
 
 ## 代码签名
 

@@ -334,10 +334,33 @@ inside the Basic Multilingual Plane, or use an inline SVG.
 | `install.elevate` | `true` requires admin, installs machine-wide (HKLM); `false` is per-user (HKCU) |
 | `install.shortcuts` | `desktop`, `startMenu`, `startMenuFolder` |
 | `install.uninstallEntry` | Generate an uninstaller and register it |
+| `install.legacyFolderPicker` | Force the XP-era folder tree box; see below |
 | `uninstall.ui` | Give the uninstaller the same HTML interface (default `true`) |
 | `compression` | `lzma` (smallest), `bzip2`, `zlib` (fastest build) |
 | `sign` | Authenticode signing; omit to ship unsigned |
 | `nsis.include` | Path to an `.nsh` injected into the generated script |
+
+### On `install.legacyFolderPicker`
+
+Choosing a directory uses the explorer dialog (`IFileOpenDialog`) by default:
+address bar, favourites, and somewhere to paste a path. Turning this on
+substitutes the 400-pixel-wide tree box from the XP era
+(`SHBrowseForFolder`).
+
+**It is an escape hatch, not a style choice.** The modern dialog is hosted by
+the shell, which means it is exposed to whatever shell extensions are loaded
+into the process on a given machine. Where one of those makes it hang or refuse
+to open, the old tree box still works, because it asks far less of the shell.
+Turn it on against a reproduction, not a preference.
+
+A page can also override a single call without changing the build:
+
+```js
+await fs.pickDirectory({ title: 'Choose a folder', legacy: true });
+```
+
+Both paths cancel the same way: **declining ends the request** and does not
+open a second dialog.
 
 ## Signing
 

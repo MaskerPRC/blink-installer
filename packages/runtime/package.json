@@ -1,6 +1,6 @@
 {
   "name": "blink-installer-runtime",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Prebuilt binaries for blink-installer: the blinkkit NSIS plugin, the miniblink engine, and a minimal NSIS toolchain.",
   "//license": "Own code is MIT; the package exists to redistribute third-party binaries under their own terms. See THIRD-PARTY-NOTICES.md.",
   "license": "MIT AND Apache-2.0 AND Zlib AND CPL-1.0",
