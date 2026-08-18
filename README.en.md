@@ -54,6 +54,8 @@ npx blink-installer init
 npx blink-installer build
 ```
 
+> 🤖 **Would rather not write it yourself?** [Hand a prompt to a coding agent](#let-an-ai-agent-integrate-it) — it reads your project and produces the animation, dialogs and install flow to match.
+
 ---
 
 ## How it gets away with it
