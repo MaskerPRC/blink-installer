@@ -17,6 +17,8 @@
 
 </div>
 
+> 🤖 **不想自己写？** [复制一段提示语给 AI agent](#让-ai-agent-帮你集成)，它读懂你的项目后会生成配套的动画、对话框和安装流程。
+
 ---
 
 ## 受够了吧
@@ -48,8 +50,6 @@ npm i -D blink-installer
 npx blink-installer init
 npx blink-installer build
 ```
-
-> 🤖 **不想自己写？** [复制一段提示语给 AI agent](#让-ai-agent-帮你集成)，它读懂你的项目后会生成配套的动画、对话框和安装流程。
 
 ---
 

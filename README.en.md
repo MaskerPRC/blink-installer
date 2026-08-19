@@ -17,6 +17,8 @@
 
 </div>
 
+> 🤖 **Would rather not write it yourself?** [Hand a prompt to a coding agent](#let-an-ai-agent-integrate-it) — it reads your project and produces the animation, dialogs and install flow to match.
+
 ---
 
 ## Sound familiar?
@@ -53,8 +55,6 @@ npm i -D blink-installer
 npx blink-installer init
 npx blink-installer build
 ```
-
-> 🤖 **Would rather not write it yourself?** [Hand a prompt to a coding agent](#let-an-ai-agent-integrate-it) — it reads your project and produces the animation, dialogs and install flow to match.
 
 ---
 
