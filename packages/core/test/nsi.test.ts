@@ -45,6 +45,23 @@ describe('installer script', () => {
     assert.doesNotMatch(script, /InstallDir "\$\$LOCALAPPDATA/);
   });
 
+  it('names the install directory separately from the display name', () => {
+    const script = renderInstallerScript(
+      inputs({ productName: '我的应用', install: { folderName: 'MyApp' } }),
+    );
+    assert.match(script, /!define FOLDER_NAME "MyApp"/);
+    assert.match(script, /!define PRODUCT_NAME "我的应用"/);
+    // Left for NSIS to expand, the same way ${PRODUCT_NAME} always was.
+    assert.match(script, /InstallDir "\$PROGRAMFILES\\\$\{FOLDER_NAME\}"/);
+    // The page appends this when the user browses, so it must not be left to
+    // fall back to the display name.
+    assert.match(script, /SetConfig \/NOUNLOAD "folderName" "\$\{FOLDER_NAME\}"/);
+  });
+
+  it('falls back to the product name when no directory name is given', () => {
+    assert.match(renderInstallerScript(inputs()), /!define FOLDER_NAME "App"/);
+  });
+
   it('escapes dollar signs in real filesystem paths', () => {
     const base = inputs();
     const script = renderInstallerScript({ ...base, outputPath: 'C:\\a$b\\Setup.exe' });

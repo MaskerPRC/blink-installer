@@ -93,7 +93,8 @@ export default defineConfig({
   splash: { enabled: true },     // 全屏入场动画
 
   install: {
-    defaultDir: '$LOCALAPPDATA\\Programs\\我的应用',
+    folderName: 'MyApp',         // 安装目录名；标题、快捷方式照旧用中文显示名
+    defaultDir: '$LOCALAPPDATA\\Programs\\MyApp',
     elevate: false,              // 每用户安装，免 UAC
     shortcuts: { desktop: true, startMenu: true },
   },
@@ -147,6 +148,8 @@ npx blink-installer init --eject-ui
 - version 和 productName 从 package.json 现算，不要写死（写死必然漂）
 - source 指向已打包目录（electron-builder 是 dist/<out>/win-unpacked）
 - exe 是该目录下的主程序文件名
+- productName 是中文就一定要配 install.folderName（英文字母数字），否则安装目录会是
+  `C:\Program Files\中文名`——路径里的中文谁都不想敲；不配会直接构建失败并提示
 - 装 $LOCALAPPDATA 就设 elevate: false（免 UAC，体验好得多）；装 $PROGRAMFILES 才需要 true
 - output 若要替换现有安装包，就对齐原来的产物命名规则
 
@@ -261,7 +264,8 @@ CSS 不做转译，避开 flex 子项上的 `position: sticky`，2017 年之后�
 | `icon` | setup.exe 与「程序和功能」里的 `.ico` |
 | `window` | `width`、`height`、`transparent` |
 | `splash` | `enabled`、`timeoutMs`（动画卡住时的兜底） |
-| `install.defaultDir` | 可用 `$PROGRAMFILES`、`$LOCALAPPDATA` 等 NSIS 变量 |
+| `install.defaultDir` | 可用 `$PROGRAMFILES`、`$LOCALAPPDATA` 等 NSIS 变量，以及 `${FOLDER_NAME}` |
+| `install.folderName` | 安装目录叶子名（`C:\Program Files\MyApp` 里的 `MyApp`），只收英文字母数字与空格 `.` `_` `-`。默认取 `productName`；`productName` 不是合法目录名（例如中文）时必须配 |
 | `install.elevate` | `true` 需管理员、装全机（HKLM）；`false` 为每用户（HKCU） |
 | `install.shortcuts` | `desktop`、`startMenu`、`startMenuFolder` |
 | `install.uninstallEntry` | 生成卸载程序并注册 |

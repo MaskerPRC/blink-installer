@@ -95,6 +95,10 @@ export default defineConfig({
   // ui: './installer-ui',
 
   install: {
+    // The install path's leaf directory. Defaults to \`productName\`; set it
+    // here when that is not something you want to see in a path, such as a
+    // product named in Chinese.
+    // folderName: 'MyApp',
     defaultDir: '$PROGRAMFILES\\\\My App',
     shortcuts: { desktop: true, startMenu: true },
   },
@@ -187,12 +191,18 @@ async function usePreviewIdentity(
       ? install['registryKey'] + '\\UIPreview'
       : undefined;
 
+  // `product` is a display name and may be in any script; the preview installs
+  // into a real directory, so follow folderName the way a real build does.
+  const folder =
+    typeof install['folderName'] === 'string' ? install['folderName'] : product;
+  const previewDir = '$LOCALAPPDATA\\blink-installer-preview\\' + folder;
+
   config['install'] = {
     ...install,
     // A fixed preview directory rather than the configured one. Deliberately
     // not derived from defaultDir: that may be $PROGRAMFILES, and a preview
     // has no business asking for elevation.
-    defaultDir: '$LOCALAPPDATA\\blink-installer-preview\\' + product,
+    defaultDir: previewDir,
     elevate: false,
     runAfter: false,
     // Nothing user-visible outside the preview's own directory.
@@ -203,7 +213,7 @@ async function usePreviewIdentity(
   process.stdout.write(
     'ui-only: previewing the interface, isolated from any real install\n' +
       `  payload   -> placeholder in ${dir}\n` +
-      `  installs  -> $LOCALAPPDATA\\blink-installer-preview\\${product}\n` +
+      `  installs  -> ${previewDir}\n` +
       '  shortcuts -> off,  elevate -> off,  runAfter -> off\n' +
       '  not a distributable installer\n',
   );

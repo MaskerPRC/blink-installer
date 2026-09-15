@@ -1,4 +1,12 @@
-export { defineConfig, parseConfig, configSchema, normalizeVersion } from './config.js';
+export {
+  defineConfig,
+  parseConfig,
+  configSchema,
+  normalizeVersion,
+  resolveFolderName,
+  isSafeFolderName,
+  DEFAULT_INSTALL_DIR,
+} from './config.js';
 export type { BlinkInstallerConfig, ResolvedConfig } from './config.js';
 export { buildInstaller } from './build.js';
 export type { BuildOptions, BuildResult } from './build.js';

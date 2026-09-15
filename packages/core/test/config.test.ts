@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizeVersion, parseConfig } from '../dist/config.js';
+import { DEFAULT_INSTALL_DIR, normalizeVersion, parseConfig } from '../dist/config.js';
 
 const minimal = {
   appId: 'com.example.app',
@@ -71,5 +71,55 @@ describe('parseConfig', () => {
     // Not overridden, so it must still be the default rather than undefined.
     assert.equal(config.install.shortcuts.startMenu, true);
     assert.equal(config.install.uninstallEntry, true);
+  });
+});
+
+describe('the install directory name', () => {
+  // The product name is a display name. Deriving the install path from it gave
+  // every product with a Chinese title a Chinese default directory.
+  const chinese = { ...minimal, productName: '我的应用' };
+
+  it('leaves an ASCII product name deriving the default path', () => {
+    const config = parseConfig(minimal);
+    assert.equal(config.install.defaultDir, DEFAULT_INSTALL_DIR);
+    assert.equal(config.install.folderName, undefined);
+  });
+
+  it('accepts a product name with spaces', () => {
+    // 'My App' has always worked and is an ordinary thing to write.
+    assert.doesNotThrow(() => parseConfig({ ...minimal, productName: 'My App' }));
+  });
+
+  it('refuses to derive a path from a name that is not one, naming the fix', () => {
+    assert.throws(
+      () => parseConfig(chinese),
+      (error: Error) => {
+        assert.match(error.message, /productName/);
+        assert.match(error.message, /install\.folderName/);
+        return true;
+      },
+    );
+  });
+
+  it('accepts such a product name once the directory is named separately', () => {
+    const config = parseConfig({ ...chinese, install: { folderName: 'MyApp' } });
+    assert.equal(config.install.folderName, 'MyApp');
+    // The display name is untouched: the window title and shortcuts want it.
+    assert.equal(config.productName, '我的应用');
+  });
+
+  it('leaves a config that chose its own defaultDir alone', () => {
+    // Already a deliberate decision, whatever it says.
+    assert.doesNotThrow(() =>
+      parseConfig({ ...chinese, install: { defaultDir: '$PROGRAMFILES\\我的应用' } }),
+    );
+  });
+
+  it('rejects a folderName that is not a usable directory name', () => {
+    assert.throws(() => parseConfig({ ...minimal, install: { folderName: 'bad/name' } }), /folderName/);
+    assert.throws(() => parseConfig({ ...minimal, install: { folderName: '我的应用' } }), /folderName/);
+    // Windows strips a trailing dot, so the directory is created under one name
+    // and looked up under another.
+    assert.throws(() => parseConfig({ ...minimal, install: { folderName: 'MyApp.' } }), /folderName/);
   });
 });

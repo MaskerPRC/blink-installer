@@ -124,6 +124,9 @@ npx blink-installer init --eject-ui
 - source points at the packaged directory (for electron-builder,
   dist/<out>/win-unpacked)
 - exe is the main executable's filename inside that directory
+- If productName is not ASCII, set install.folderName as well. The default
+  install path is built from the product name, and nobody wants to type a path
+  they cannot type. The build fails with this advice rather than shipping one
 - Installing under $LOCALAPPDATA means elevate: false — no UAC, a much better
   experience. Only $PROGRAMFILES needs true
 - If this should replace an existing installer, match its artifact naming
@@ -279,7 +282,8 @@ inside the Basic Multilingual Plane, or use an inline SVG.
 | `icon` | `.ico` for setup.exe and Programs and Features |
 | `window` | `width`, `height`, `transparent` |
 | `splash` | `enabled`, `timeoutMs` (backstop if the animation hangs) |
-| `install.defaultDir` | May use NSIS variables such as `$PROGRAMFILES` |
+| `install.defaultDir` | May use NSIS variables such as `$PROGRAMFILES`, and `${FOLDER_NAME}` |
+| `install.folderName` | Leaf directory of the install path — `MyApp` in `C:\Program Files\MyApp`. Letters, digits, space, `.`, `_`, `-`. Defaults to `productName`, and is required when that is not a usable directory name |
 | `install.elevate` | `true` requires admin, installs machine-wide (HKLM); `false` is per-user (HKCU) |
 | `install.shortcuts` | `desktop`, `startMenu`, `startMenuFolder` |
 | `install.uninstallEntry` | Generate an uninstaller and register it |

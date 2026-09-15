@@ -40,6 +40,9 @@ const state = {
   installDir: '',
   exeName: '',
   productName: 'Setup',
+  // The directory name, which is not always the display name — a product with
+  // a Chinese title still installs into an ASCII folder.
+  folderName: 'Setup',
 };
 
 // ---------------------------------------------------------------------------
@@ -138,7 +141,7 @@ $('btn-browse').onclick = async () => {
     title: '选择安装位置',
     defaultPath: state.installDir,
   });
-  if (picked) setInstallDir(`${picked}\\${state.productName}`);
+  if (picked) setInstallDir(`${picked}\\${state.folderName}`);
 };
 
 $('opt-desktop').onchange = (event) => {
@@ -230,6 +233,7 @@ $('btn-finish').onclick = async () => {
 function boot() {
   const all = config.all();
   state.productName = all.productName || 'Setup';
+  state.folderName = all.folderName || state.productName;
   state.exeName = all.exeName || '';
   state.installDir = all.installDir || '';
 

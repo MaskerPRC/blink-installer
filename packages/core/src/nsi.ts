@@ -12,7 +12,7 @@
  *    or accented product name will always contain.
  */
 import type { ResolvedConfig } from './config.js';
-import { normalizeVersion } from './config.js';
+import { normalizeVersion, resolveFolderName } from './config.js';
 
 /**
  * Escapes a literal string for NSIS.
@@ -90,6 +90,8 @@ Unicode true
 ManifestDPIAware true
 
 !define PRODUCT_NAME "${defineValue(c.productName)}"
+; The install path's leaf directory, which is not always the display name.
+!define FOLDER_NAME "${defineValue(resolveFolderName(c))}"
 !define PRODUCT_VERSION "${version4}"
 !define PRODUCT_PUBLISHER "${defineValue(c.publisher)}"
 !define PRODUCT_DESCRIPTION "${defineValue(c.description)}"
@@ -184,6 +186,9 @@ ${
   blinkkit::SetConfig /NOUNLOAD "website" "\${PRODUCT_WEBSITE}"
   blinkkit::SetConfig /NOUNLOAD "exeName" "\${PRODUCT_EXE}"
   blinkkit::SetConfig /NOUNLOAD "installDir" "$INSTDIR"
+  ; So a page that appends a folder to a browsed-for directory appends the same
+  ; one the default path uses, rather than the display name.
+  blinkkit::SetConfig /NOUNLOAD "folderName" "\${FOLDER_NAME}"
   blinkkit::SetConfig /NOUNLOAD "allowDirChange" "${c.install.allowDirChange ? '1' : '0'}"
   blinkkit::SetConfig /NOUNLOAD "legacyFolderPicker" "${c.install.legacyFolderPicker ? '1' : '0'}"
   blinkkit::SetConfig /NOUNLOAD "mode" "install"

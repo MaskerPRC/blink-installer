@@ -28,13 +28,57 @@ const shortcutsSchema = z
   })
   .default({});
 
+/**
+ * The install directory when nothing is configured.
+ *
+ * `${FOLDER_NAME}` rather than `${PRODUCT_NAME}`: the product name is a display
+ * name and may be written in any script, but a path component people have to
+ * type, quote in a batch file and see in a command prompt should not be. The
+ * two are separate fields so a Chinese product can keep its Chinese title and
+ * still install into an ASCII directory.
+ *
+ * Exported because parseConfig compares against it to tell "the user left the
+ * default" from "the user chose this path", and only the former is validated.
+ */
+export const DEFAULT_INSTALL_DIR = '$PROGRAMFILES\\${FOLDER_NAME}';
+
+/**
+ * Whether a string may be used as the leaf directory of the install path.
+ *
+ * Spaces are allowed because `productName: 'My App'` is ordinary and has always
+ * worked. Trailing spaces and dots are not: Windows silently strips them, so a
+ * directory created under one name is looked up under another.
+ */
+export function isSafeFolderName(name: string): boolean {
+  if (!/^[A-Za-z0-9 ._-]+$/.test(name)) return false;
+  return !/[ .]$/.test(name);
+}
+
+/** The leaf directory name, which falls back to the product name. */
+export function resolveFolderName(config: {
+  productName: string;
+  install: { folderName?: string | undefined };
+}): string {
+  return config.install.folderName ?? config.productName;
+}
+
 const installSchema = z
   .object({
     /**
      * Default install directory. NSIS variables such as $PROGRAMFILES,
-     * $LOCALAPPDATA and $PROGRAMFILES64 may be used.
+     * $LOCALAPPDATA and $PROGRAMFILES64 may be used, as may ${FOLDER_NAME} and
+     * ${PRODUCT_NAME}.
      */
-    defaultDir: z.string().default('$PROGRAMFILES\\${PRODUCT_NAME}'),
+    defaultDir: z.string().default(DEFAULT_INSTALL_DIR),
+    /**
+     * Leaf directory name for the default install path — `MyApp` in
+     * `C:\Program Files\MyApp`. Defaults to productName, and is required when
+     * that is not a usable directory name.
+     *
+     * This is not the displayed name: the window title, shortcuts and the
+     * Programs and Features entry all stay on productName.
+     */
+    folderName: z.string().optional(),
     /** Whether the page may change the directory via fs.pickDirectory. */
     allowDirChange: z.boolean().default(true),
     /**
@@ -212,5 +256,39 @@ export function parseConfig(input: unknown): ResolvedConfig {
       .join('\n');
     throw new Error(`Invalid blink-installer config:\n${issues}`);
   }
+  checkFolderName(result.data);
   return result.data;
+}
+
+/**
+ * The install directory has to survive being typed, quoted and pasted long
+ * after the installer has run, so refuse a name that will not — but only when
+ * we are the ones choosing it. A config that sets `defaultDir` has already made
+ * this decision deliberately and is left alone, whatever it says.
+ */
+function checkFolderName(config: ResolvedConfig): void {
+  const { folderName } = config.install;
+
+  if (folderName !== undefined && !isSafeFolderName(folderName)) {
+    throw new Error(
+      `Invalid blink-installer config:\n` +
+        `  - install.folderName: "${folderName}" is not a usable directory name.\n` +
+        `    Use letters and digits; space, dot, underscore and hyphen are also\n` +
+        `    allowed, but not as the last character.`,
+    );
+  }
+
+  if (folderName !== undefined) return;
+  if (config.install.defaultDir !== DEFAULT_INSTALL_DIR) return;
+  if (isSafeFolderName(config.productName)) return;
+
+  throw new Error(
+    `Invalid blink-installer config:\n` +
+      `  - productName: "${config.productName}" cannot be used as the install\n` +
+      `    directory name, so the default install path cannot be derived from it.\n` +
+      `    Set install.folderName to letters and digits (space, dot, underscore\n` +
+      `    and hyphen are also allowed):\n` +
+      `      install: { folderName: 'MyApp' }\n` +
+      `    or set install.defaultDir to choose the whole path yourself.`,
+  );
 }

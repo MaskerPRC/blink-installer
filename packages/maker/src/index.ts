@@ -20,6 +20,15 @@
  * directory in `opts.dir` — exactly the input the pipeline wants. Everything
  * this package does is fill in the fields Forge already knows (product name,
  * version, executable) and delegate.
+ *
+ * One field is worth setting by hand: Forge's product name is a display name
+ * and is often not ASCII, and the default install path is built from it. Where
+ * that is the case, name the directory separately —
+ *
+ *   install: { folderName: 'myapp' }
+ *
+ * — and the window title, shortcuts and Programs and Features entry keep the
+ * product name while the path stays typeable. The build says so if it matters.
  */
 import { MakerBase, type MakerOptions } from '@electron-forge/maker-base';
 import { buildInstaller, type BlinkInstallerConfig } from 'blink-installer-core';
